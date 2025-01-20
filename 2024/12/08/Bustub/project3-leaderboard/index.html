@@ -18,18 +18,18 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.21.1","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"default"},"fold":{"enable":false,"height":500},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"duration":100,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.json","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="cmu15-445 Bustub project 3 Query Execution leaderboard 部分解析。">
+    <meta name="description" content="这是一个关于我自己的cmu15-445 project 3 leaderboard部分的攻略，不会涉及其前面基础实现部分。最终效果三个部分平均用时2000以内，进了排行榜前十。 引自joey-wang">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Project 3 leaderboard 优化">
 <meta property="og:url" content="http://example.com/2024/12/08/Bustub/project3-leaderboard/index.html">
 <meta property="og:site_name" content="wcf&#39;s Blog">
-<meta property="og:description" content="cmu15-445 Bustub project 3 Query Execution leaderboard 部分解析。">
+<meta property="og:description" content="这是一个关于我自己的cmu15-445 project 3 leaderboard部分的攻略，不会涉及其前面基础实现部分。最终效果三个部分平均用时2000以内，进了排行榜前十。 引自joey-wang">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://i-blog.csdnimg.cn/direct/059ce9aa4865460797af7c48176abc08.png#pic_center">
 <meta property="og:image" content="https://i-blog.csdnimg.cn/direct/bc28397020ab4437bbce3ac400b42368.png#pic_center">
 <meta property="og:image" content="https://i-blog.csdnimg.cn/direct/56f81ad3ada240c29acd9eecd359ed73.png#pic_center">
 <meta property="article:published_time" content="2024-12-08T05:55:13.000Z">
-<meta property="article:modified_time" content="2025-01-20T22:56:09.112Z">
+<meta property="article:modified_time" content="2025-01-20T23:01:45.024Z">
 <meta property="article:author" content="Chengfeng Wang">
 <meta property="article:tag" content="数据库">
 <meta property="article:tag" content="Bustub">
@@ -150,7 +150,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Query-1-TopNPerGroupPlan"><span class="nav-number">2.</span> <span class="nav-text">Query 1: TopNPerGroupPlan</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Query-2-Too-Many-Joins"><span class="nav-number">3.</span> <span class="nav-text">Query 2: Too Many Joins!</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E6%9E%90"><span class="nav-number">3.1.</span> <span class="nav-text">解析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E4%BA%8EHash-Join"><span class="nav-number">3.2.</span> <span class="nav-text">关于Hash Join</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BC%98%E5%8C%96"><span class="nav-number">3.3.</span> <span class="nav-text">优化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E4%B8%80%E6%AD%A5%E4%BC%98%E5%8C%96%E6%83%B3%E6%B3%95"><span class="nav-number">3.4.</span> <span class="nav-text">进一步优化想法</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Query-3-The-Mad-Data-Scientist"><span class="nav-number">4.</span> <span class="nav-text">Query 3: The Mad Data Scientist</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E9%87%8F%E6%8A%98%E5%8F%A0-Constant-Folding"><span class="nav-number">4.1.</span> <span class="nav-text">常量折叠 Constant Folding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%97%E5%89%AA%E6%9E%9D-ColumnPruning"><span class="nav-number">4.2.</span> <span class="nav-text">列剪枝 ColumnPruning</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%90%8E%E8%AE%B0"><span class="nav-number">5.</span> <span class="nav-text">后记</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Query-1-TopNPerGroupPlan"><span class="nav-number">1.</span> <span class="nav-text">Query 1: TopNPerGroupPlan</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Query-2-Too-Many-Joins"><span class="nav-number">2.</span> <span class="nav-text">Query 2: Too Many Joins!</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E6%9E%90"><span class="nav-number">2.1.</span> <span class="nav-text">解析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E4%BA%8EHash-Join"><span class="nav-number">2.2.</span> <span class="nav-text">关于Hash Join</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BC%98%E5%8C%96"><span class="nav-number">2.3.</span> <span class="nav-text">优化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E4%B8%80%E6%AD%A5%E4%BC%98%E5%8C%96%E6%83%B3%E6%B3%95"><span class="nav-number">2.4.</span> <span class="nav-text">进一步优化想法</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Query-3-The-Mad-Data-Scientist"><span class="nav-number">3.</span> <span class="nav-text">Query 3: The Mad Data Scientist</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E9%87%8F%E6%8A%98%E5%8F%A0-Constant-Folding"><span class="nav-number">3.1.</span> <span class="nav-text">常量折叠 Constant Folding</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%97%E5%89%AA%E6%9E%9D-ColumnPruning"><span class="nav-number">3.2.</span> <span class="nav-text">列剪枝 ColumnPruning</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%90%8E%E8%AE%B0"><span class="nav-number">4.</span> <span class="nav-text">后记</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -223,7 +223,7 @@
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
       <meta itemprop="name" content="Project 3 leaderboard 优化 | wcf's Blog">
-      <meta itemprop="description" content="cmu15-445 Bustub project 3 Query Execution leaderboard 部分解析。">
+      <meta itemprop="description" content="">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
@@ -245,7 +245,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2025-01-20 17:56:09" itemprop="dateModified" datetime="2025-01-20T17:56:09-05:00">2025-01-20</time>
+      <time title="修改时间：2025-01-20 18:01:45" itemprop="dateModified" datetime="2025-01-20T18:01:45-05:00">2025-01-20</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -289,7 +289,6 @@
     </span>
 </div>
 
-            <div class="post-description">cmu15-445 Bustub project 3 Query Execution leaderboard 部分解析。</div>
         </div>
       </header>
 
@@ -298,8 +297,11 @@
     
     <div class="post-body" itemprop="articleBody"><meta name="referrer" content="no-referrer"/>
 
-<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>这是一个关于我自己的cmu15-445 project 3 leaderboard部分的攻略，不会涉及其前面基础实现部分。最终效果三个部分平均用时2000以内，进了排行榜前十。</p>
+
+<p>这是一个关于我自己的cmu15-445 project 3 leaderboard部分的攻略，不会涉及其前面基础实现部分。最终效果三个部分平均用时2000以内，进了排行榜前十。</p>
 <p><img src="https://i-blog.csdnimg.cn/direct/059ce9aa4865460797af7c48176abc08.png#pic_center"><br>引自<a target="_blank" rel="noopener" href="https://www.cnblogs.com/joey-wang/p/17351258.html">joey-wang</a></p>
+<span id="more"></span>
+
 <h1 id="Query-1-TopNPerGroupPlan"><a href="#Query-1-TopNPerGroupPlan" class="headerlink" title="Query 1: TopNPerGroupPlan"></a>Query 1: TopNPerGroupPlan</h1><p>根据例子：</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> t1(x <span class="type">INT</span>, y <span class="type">INT</span>, z <span class="type">INT</span>);</span><br><span class="line"><span class="keyword">SELECT</span> x, y <span class="keyword">FROM</span> (</span><br><span class="line">  <span class="keyword">SELECT</span> x, y, <span class="built_in">rank</span>() <span class="keyword">OVER</span> (<span class="keyword">partition</span> <span class="keyword">by</span> x <span class="keyword">order</span> <span class="keyword">by</span> y) <span class="keyword">as</span> rank</span><br><span class="line">  <span class="keyword">FROM</span> t1</span><br><span class="line">) <span class="keyword">WHERE</span> rank <span class="operator">&lt;=</span> <span class="number">3</span>;</span><br></pre></td></tr></table></figure>
 
