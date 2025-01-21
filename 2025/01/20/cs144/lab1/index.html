@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Playfair+Display:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Oswald:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Source+Sans+Pro:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.21.1","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"default"},"fold":{"enable":false,"height":500},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"duration":100,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.json","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="Lab0 体验了操作系统自带的socket的使用。接下来 Lab1 ～ Lab4 会逐步实现上图这样的一个CS144TCPSockert (socket不一定是基于TCP，也可以是UDP，所以这个叫TCPSocket)，利用不可靠的Network层实现一个可靠的传输流。 Lab1实现的是StreamReassembler。如图，StreamReassembler是位于TCP接收端。从Netwo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Lab1 Stitching substrings into a byte stream">
+<meta property="og:url" content="http://example.com/2025/01/20/cs144/lab1/index.html">
+<meta property="og:site_name" content="wcf&#39;s Blog">
+<meta property="og:description" content="Lab0 体验了操作系统自带的socket的使用。接下来 Lab1 ～ Lab4 会逐步实现上图这样的一个CS144TCPSockert (socket不一定是基于TCP，也可以是UDP，所以这个叫TCPSocket)，利用不可靠的Network层实现一个可靠的传输流。 Lab1实现的是StreamReassembler。如图，StreamReassembler是位于TCP接收端。从Netwo">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/80e4aa9ad54f4eb9bc93cf8804a499ac.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/89c6287ba9634c3fbce76bc1c16d3ec7.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/73e1ffef31364b6c839e0172f84fcb33.png">
+<meta property="article:published_time" content="2025-01-21T02:58:37.815Z">
+<meta property="article:modified_time" content="2025-01-21T03:04:43.671Z">
+<meta property="article:author" content="Chengfeng Wang">
+<meta property="article:tag" content="计算机网络">
+<meta property="article:tag" content="Sponge">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i-blog.csdnimg.cn/direct/80e4aa9ad54f4eb9bc93cf8804a499ac.png">
+
+
+<link rel="canonical" href="http://example.com/2025/01/20/cs144/lab1/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2025/01/20/cs144/lab1/","path":"2025/01/20/cs144/lab1/","title":"Lab1 Stitching substrings into a byte stream"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Lab1 Stitching substrings into a byte stream | wcf's Blog</title>
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-SKXYMFTP44"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-SKXYMFTP44');
+</script>
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="stylesheet" href="/css/prism.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">wcf's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-bustub"><a href="/Bustub/" rel="section"><i class="fa-solid fa-database fa-fw"></i>Bustub</a></li><li class="menu-item menu-item-cs144"><a href="/cs144/" rel="section"><i class="fa-solid fa-network-wired fa-fw"></i>cs144</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%9D%E8%B7%AF"><span class="nav-number">1.</span> <span class="nav-text">思路</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81"><span class="nav-number">2.</span> <span class="nav-text">代码</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BB%93%E6%9E%9C"><span class="nav-number">3.</span> <span class="nav-text">结果</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Chengfeng Wang"
+      src="/uploads/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">Chengfeng Wang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">5</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/Wangch29" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;Wangch29" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:wangch0209@gmail.com" title="E-Mail → mailto:wangch0209@gmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/01/20/cs144/lab1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/uploads/avatar.jpeg">
+      <meta itemprop="name" content="Chengfeng Wang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcf's Blog">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Lab1 Stitching substrings into a byte stream | wcf's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Lab1 Stitching substrings into a byte stream
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2025-01-20 21:58:37 / 修改时间：22:04:43" itemprop="dateCreated datePublished" datetime="2025-01-20T21:58:37-05:00">2025-01-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C/" itemprop="url" rel="index"><span itemprop="name">计算机网络</span></a>
+        </span>
+    </span>
+
+  
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2025/01/20/cs144/lab1/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2025/01/20/cs144/lab1/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.1k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><meta name="referrer" content="no-referrer"/>
+
+<p><img src="https://i-blog.csdnimg.cn/direct/80e4aa9ad54f4eb9bc93cf8804a499ac.png" alt="请添加图片描述"><br>Lab0 体验了操作系统自带的socket的使用。接下来 Lab1 ～ Lab4 会逐步实现上图这样的一个<strong>CS144TCPSockert</strong> (socket不一定是基于TCP，也可以是UDP，所以这个叫TCPSocket)，利用不可靠的Network层实现一个可靠的传输流。</p>
+<p>Lab1实现的是<strong>StreamReassembler</strong>。如图，StreamReassembler是位于TCP接收端。从Network层接收过来的包非常杂乱，可能<strong>丢失、颠倒、重复、错误</strong>，而StreamReassembler的作用就是把这些乱七八糟的包重组成原本的模样。就像给一副混乱的扑克牌，让它给你重组成出厂的顺序。</p>
+<span id="more"></span>
+
+<h1 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h1><p>这个需要byte-wise存储。</p>
+<p>但是，我刚开始想的：TCP sender端是按package重发的，因为sender是切割package内容不会重合，重发的时候也只会重发相同的内容，所以按道理来说发过来的package不会出现重合的情况，也就是StreamReassembler接收的substring不会出现重合的情况。但是直到写完了才发现测试中却有重合的情况，因为目前还没看其余部分，所以具体为啥会重合就不太清楚，但也只能改成按每个字节记录了。</p>
+<p>根据<a target="_blank" rel="noopener" href="https://lrl52.top/996/cs144-lablab1/">这个博客</a>的实测，如果用std::map的log(n)复杂度会超时。但这位大佬用的std::vector储存，我觉得如果assemble之后释放内存，std::vector内部会移动所有剩余字节，传来的bytes太不连续的话就会非常频繁地调用复制粘贴，效率会很低。但如果assemble完不释放，当这个class运行久了，就会占据非常大量的内存，设计个定期释放又太麻烦。</p>
+<p>我又想到直接用std::unordered_map， 键为index，值为char。这样直接常数插入，还可以自动回收空间，但spatial locality太差。</p>
+<p>我突然想到了我在写前面Lab0解析中介绍过的<strong>std::deque</strong>。这个底层大概是一个array，每个entry指向一个固定大小的block（有点类似文件系统里的inode），索引访问、pop_front() 时间复杂度都是O(1)，且pop_front()后不会移动block内的数，而用一个指针表示，StreamReassembler只会从头pop的特性也让从中间插入不会发生，扩容时resize也比std::vector更快，而且也有很好的spatial locality，block size对齐cacheline，prefetch下个block，让连续pop_front也很快。</p>
+<p>而capacity的定义可见下图：</p>
+<p><img src="https://i-blog.csdnimg.cn/direct/89c6287ba9634c3fbce76bc1c16d3ec7.png" alt="请添加图片描述"><br>要注意<strong>unassembled中的“空格”也算在capacity其中</strong>。比如先加入“abc” index&#x3D;0，再加入“ghX”，index &#x3D; 6， 那么此时虽然“c”和“g“之间的char还不在，但也要算在capacity中（上图红色部分很清楚的表示这点）。所以这个例子中capacity&#x3D;9。</p>
+<h1 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h1><p>添加新成员，unassembled bytes放在std::deque里，assemble bytes放进ByteStream里。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">StreamReassembler</span> &#123;</span><br><span class="line">  <span class="keyword">private</span>:</span><br><span class="line">    ByteStream _output;  <span class="comment">//!&lt; The reassembled in-order byte stream</span></span><br><span class="line">    <span class="comment">/** The next unassembled index. */</span></span><br><span class="line">    <span class="type">uint64_t</span> _next&#123;<span class="number">0</span>&#125;;</span><br><span class="line">    <span class="comment">/** Unassembled bytes. */</span></span><br><span class="line">    std::deque&lt;std::optional&lt;<span class="type">char</span>&gt;&gt; _unassembled_bytes;</span><br><span class="line">    <span class="comment">/** Size of unassembled bytes. */</span></span><br><span class="line">    <span class="type">size_t</span> _unassembled_size&#123;<span class="number">0</span>&#125;;</span><br><span class="line">    <span class="comment">/** The maximum number of bytes. */</span></span><br><span class="line">    <span class="type">size_t</span> _capacity;</span><br><span class="line">    <span class="comment">/**  */</span></span><br><span class="line">    <span class="type">bool</span> _eof;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">assemble_bytes</span><span class="params">()</span></span>;</span><br><span class="line">    </span><br><span class="line">... ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>stream_reassembler.cc</strong>中：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">StreamReassembler::push_substring</span><span class="params">(<span class="type">const</span> string &amp;data, <span class="type">const</span> <span class="type">size_t</span> index, <span class="type">const</span> <span class="type">bool</span> eof)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// Set new eof.</span></span><br><span class="line">    _eof = _eof || eof;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// The index data begin to push.</span></span><br><span class="line">    <span class="type">int</span> data_begin_idx = index &gt;= _next ? <span class="number">0</span> : std::<span class="built_in">min</span>(data.<span class="built_in">size</span>(), _next - index);</span><br><span class="line">    <span class="comment">// The valid data length, ingore stuff before _next.</span></span><br><span class="line">    <span class="type">size_t</span> valid_length = data.<span class="built_in">size</span>() - data_begin_idx;</span><br><span class="line">    <span class="comment">// Index begins in _unassembly_bytes.</span></span><br><span class="line">    <span class="type">int</span> unassem_idx = (index &gt; _next &amp;&amp; valid_length != <span class="number">0</span>) ? index - _next : <span class="number">0</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// Insert to _unassembled_bytes.</span></span><br><span class="line">    <span class="keyword">if</span> (unassem_idx + valid_length &gt; _unassembled_bytes.<span class="built_in">size</span>()) &#123;</span><br><span class="line">        _unassembled_bytes.<span class="built_in">resize</span>(std::<span class="built_in">min</span>(unassem_idx + valid_length, _capacity), std::<span class="literal">nullopt</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> i = data_begin_idx; i &lt; data_begin_idx + valid_length; ++i) &#123;</span><br><span class="line">        <span class="keyword">if</span> (unassem_idx &gt;= <span class="built_in">static_cast</span>&lt;<span class="type">int</span>&gt;(_capacity - _output.<span class="built_in">buffer_size</span>())) &#123;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (_unassembled_bytes[unassem_idx] == std::<span class="literal">nullopt</span>) &#123;</span><br><span class="line">            _unassembled_size += <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        _unassembled_bytes[unassem_idx++] = data[i];</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">assemble_bytes</span>();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">size_t</span> <span class="title">StreamReassembler::unassembled_bytes</span><span class="params">()</span> <span class="type">const</span> </span>&#123; <span class="keyword">return</span> _unassembled_size; &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">bool</span> <span class="title">StreamReassembler::empty</span><span class="params">()</span> <span class="type">const</span> </span>&#123; <span class="keyword">return</span> _unassembled_size == <span class="number">0</span>; &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">StreamReassembler::assemble_bytes</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    std::string re;</span><br><span class="line">    <span class="keyword">while</span> (!_unassembled_bytes.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">        std::optional&lt;<span class="type">char</span>&gt; c = _unassembled_bytes.<span class="built_in">front</span>();</span><br><span class="line">        <span class="keyword">if</span> (!c.<span class="built_in">has_value</span>()) &#123;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        re.<span class="built_in">push_back</span>(c.<span class="built_in">value</span>());</span><br><span class="line">        _unassembled_bytes.<span class="built_in">pop_front</span>();</span><br><span class="line">        c = _unassembled_bytes.<span class="built_in">front</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    _next += re.<span class="built_in">size</span>();</span><br><span class="line">    _unassembled_size -= re.<span class="built_in">size</span>();</span><br><span class="line">    _output.<span class="built_in">write</span>(std::<span class="built_in">move</span>(re));</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (_eof &amp;&amp; _unassembled_bytes.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">        _output.<span class="built_in">end_input</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<h1 id="结果"><a href="#结果" class="headerlink" title="结果"></a>结果</h1><p>我一直用docker来做这个lab，但遇到了个很诡异的bug。在docker容器里测试lab1，会随机遇到测试卡住的情况，并且被卡住的test很随机。有时候零点几秒通过，但又有时候卡住动不了。我不用<strong>make check_lab1</strong>而直接运行单个test又不会遇到类似情况。我换到虚拟机后就不会随机卡住的情况，每一次都是顺利通过所有测试。遇到docker用不了的情况，具体不太清楚咋回事，先记录下来。</p>
+<p>换到虚拟机里测试：</p>
+<p><img src="https://i-blog.csdnimg.cn/direct/73e1ffef31364b6c839e0172f84fcb33.png" alt="请添加图片描述"></p>
+<p>速度还是很快的，兼顾了空间和速度，<strong>std::deque</strong>还是很可靠。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C/" rel="tag"># 计算机网络</a>
+              <a href="/tags/Sponge/" rel="tag"># Sponge</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/01/20/cs144/lab0/" rel="prev" title="Lab0 Networking Warmup">
+                  <i class="fa fa-angle-left"></i> Lab0 Networking Warmup
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2025/01/20/cs144/lab2/" rel="next" title="Lab2 The TCP Receiver">
+                  Lab2 The TCP Receiver <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    
+  <div class="comments" id="disqus_thread">
+    <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+  </div>
+  
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Chengfeng Wang</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">18k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">1:05</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script><script src="/js/bookmark.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="disqus" type="application/json">{"enable":true,"shortname":"wcf","count":true,"i18n":{"disqus":"disqus"}}</script>
+<script src="/js/third-party/comments/disqus.js"></script>
+
+</body>
+</html>
