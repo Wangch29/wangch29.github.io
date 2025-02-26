@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Playfair+Display:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Oswald:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Source+Sans+Pro:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.21.1","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"default"},"fold":{"enable":false,"height":500},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"duration":100,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.json","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="Lab2、3完成了TCP Receiver，接收不可靠TCPSegment，并将其重组为可靠的bytes stream。而Lab3则开始实现TCP Sender（即下图黄色部分），将一串bytes stream拆分成一个个TCP segment，交给IP层发送出去，同时还要追踪接受者接受情况，利用重传保证可靠性。Lab4则会完成最后的TCPConnection部分。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CS144 Lab3 The TCP Sender">
+<meta property="og:url" content="http://example.com/2025/02/25/cs144/lab3/index.html">
+<meta property="og:site_name" content="wcf&#39;s Blog">
+<meta property="og:description" content="Lab2、3完成了TCP Receiver，接收不可靠TCPSegment，并将其重组为可靠的bytes stream。而Lab3则开始实现TCP Sender（即下图黄色部分），将一串bytes stream拆分成一个个TCP segment，交给IP层发送出去，同时还要追踪接受者接受情况，利用重传保证可靠性。Lab4则会完成最后的TCPConnection部分。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/d742ead4d6314af8a73116afcb9dc858.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/06619379b22443edb4bde762570409e1.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/e40263217e3a4c83a10cf3d13162aa4b.png">
+<meta property="article:published_time" content="2025-02-26T00:14:40.370Z">
+<meta property="article:modified_time" content="2025-02-26T00:15:28.476Z">
+<meta property="article:author" content="Chengfeng Wang">
+<meta property="article:tag" content="计算机网络">
+<meta property="article:tag" content="Sponge">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i-blog.csdnimg.cn/direct/d742ead4d6314af8a73116afcb9dc858.png">
+
+
+<link rel="canonical" href="http://example.com/2025/02/25/cs144/lab3/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2025/02/25/cs144/lab3/","path":"2025/02/25/cs144/lab3/","title":"CS144 Lab3 The TCP Sender"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>CS144 Lab3 The TCP Sender | wcf's Blog</title>
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-SKXYMFTP44"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-SKXYMFTP44');
+</script>
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="stylesheet" href="/css/prism.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">wcf's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-bustub"><a href="/categories/Bustub/" rel="section"><i class="fa-solid fa-database fa-fw"></i>Bustub</a></li><li class="menu-item menu-item-cs144"><a href="/categories/cs144/" rel="section"><i class="fa-solid fa-network-wired fa-fw"></i>cs144</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%9D%E8%B7%AF"><span class="nav-number">1.</span> <span class="nav-text">思路</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">实现</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Chengfeng Wang"
+      src="/uploads/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">Chengfeng Wang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/Wangch29" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;Wangch29" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:wangch0209@gmail.com" title="E-Mail → mailto:wangch0209@gmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/02/25/cs144/lab3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/uploads/avatar.jpeg">
+      <meta itemprop="name" content="Chengfeng Wang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcf's Blog">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="CS144 Lab3 The TCP Sender | wcf's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          CS144 Lab3 The TCP Sender
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2025-02-25 19:14:40 / 修改时间：19:15:28" itemprop="dateCreated datePublished" datetime="2025-02-25T19:14:40-05:00">2025-02-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/cs144/" itemprop="url" rel="index"><span itemprop="name">cs144</span></a>
+        </span>
+    </span>
+
+  
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2025/02/25/cs144/lab3/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2025/02/25/cs144/lab3/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.3k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>5 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><meta name="referrer" content="no-referrer"/>
+
+<p>Lab2、3完成了TCP Receiver，接收不可靠TCPSegment，并将其重组为可靠的bytes stream。而Lab3则开始实现TCP Sender（即下图黄色部分），<strong>将一串bytes stream拆分成一个个TCP segment</strong>，交给IP层发送出去，<strong>同时还要追踪接受者接受情况，利用重传保证可靠性。</strong><br>Lab4则会完成最后的<strong>TCPConnection</strong>部分。</p>
+<span id="more"></span>
+
+<p><img src="https://i-blog.csdnimg.cn/direct/d742ead4d6314af8a73116afcb9dc858.png" alt="请添加图片描述"></p>
+<h1 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h1><p>Sender需要负责写入所有Lab2中receiver需要读取的数据：<strong>the sequence number, the SYN flag, the payload, 和 the FIN flag.</strong> 需要读取receiver写入的数据：<strong>the ackno and the window size</strong><br>即下图中，写入蓝色部分，读取红色部分。</p>
+<p><img src="https://i-blog.csdnimg.cn/direct/06619379b22443edb4bde762570409e1.png" alt="请添加图片描述"><br>Sender 需要实现以下四点：</p>
+<blockquote>
+<ol>
+<li>追踪<strong>window size</strong> （根据收到receiver的window_size 和 ackno）</li>
+<li><strong>持续发送segment</strong>，直到window size被填满或bytes stream为空。</li>
+<li>追踪被<strong>发送但未被receiver acknowledge</strong> 的segment。</li>
+<li>超时后<strong>重新发送</strong>这些segment。</li>
+</ol>
+</blockquote>
+<p>这个TCP采用了<strong>超时重传机制</strong>，即发送的segment超过一定时间没被acknoledge就重传，讲义中也写七个点介绍实现逻辑，<a target="_blank" rel="noopener" href="https://lrl52.top/1004/cs144-lablab3/">这里</a>也写了详细的流程，所以只提一下讲义未讲清楚的点。</p>
+<ol>
+<li><p>只需要<strong>一个timer</strong>记录最早未ack的segment，不需要多个timer记录多个segment。</p>
+</li>
+<li><p>一个segment包含多个byte数据（Lab2可见是一个string），而receiver又是按byte来接收并ack的（lab2我也提到了），所以只有一个segment中string的<strong>每一个bytes都被ack</strong>，才能视作segment ack。</p>
+</li>
+<li><p>计时器超时后执行重传。当receiver window size大于零，则重传segment，并加倍timer等待时间和增加重传次数。但是，<strong>如果接收者 window size 为 0</strong> ，表示接收者缓存空间不够了，不<strong>需要增加连续重传计数器和加倍 timer等待时间</strong>，只需要重启计时器即可。</p>
+</li>
+</ol>
+<blockquote>
+<p>增加连续重传次数：过多的重传次数可能意味着<strong>网络的中断</strong>，其上层的TCPConnection可选择停止重传。<br>RTO(<strong>Retransmittion Timeout</strong>)的值加倍：以降低较差网络环境的重传速度，以<strong>避免加深网络环境的拥堵</strong> </p>
+</blockquote>
+<p>所以接收者 window size 为 0时，不意味着网络的中断，也不意味着网络环境差，所以不需要增加重传计数器和加倍RTO。</p>
+<ol start="4">
+<li><p>发送TCPSegment分两种，一种是<strong>首次发送</strong>，另一种是<strong>重发</strong>。注意的是，所有segment包括syn和fin都只能首次发送一次，如果没收到，利用重发机制来发送，而不能再重新走首次发送。syn很容易判断是否属于首次发送，只需要判断 <strong>_next_seqno &#x3D;&#x3D; 0</strong> 即可。<strong>但fin无法判断是否是首次发送，所以需要一个flag来记录首次发送fin。</strong>以防止fill_window() 不断生成新的fin segment。</p>
+</li>
+<li><p>根据讲义Q&amp;A部分，window_size 初始值为1。</p>
+</li>
+</ol>
+<h1 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h1><p>和Lab2一样，很多讲义没提到的繁琐的细节。不过也不难，先写个大概逻辑，然后根据测试修正实现细节即可。</p>
+<p>我的实现大体思路：一个TCPSegment有两种被发送到的方式，<strong>首次发送</strong>和<strong>重发</strong>，每一个segment只可能被首次发送一次。首次发送的时候将其储存在一个我自己<strong>新建的std::queue</strong>中以便后续重发，收到ack后将其移出缓存的std::queue。同时，新建一个<strong>计时器timer类</strong>，tick会引发timer timeout，进而重发缓存中的一个segment。</p>
+<p>头文件</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Timer</span> &#123;</span><br><span class="line">  <span class="keyword">private</span>:</span><br><span class="line">    <span class="type">bool</span> _open&#123;<span class="literal">false</span>&#125;;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> <span class="type">long</span> _passby_time&#123;<span class="number">0</span>&#125;;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> _retransmission_timeout&#123;<span class="number">0</span>&#125;;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> _retransmission_count&#123;<span class="number">0</span>&#125;;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">set_retrans_timeout</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> timeout)</span> </span>&#123; _retransmission_timeout = timeout; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">open</span><span class="params">()</span> </span>&#123; _open = <span class="literal">true</span>; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">close</span><span class="params">()</span> </span>&#123; _open = <span class="literal">false</span>; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">unsigned</span> <span class="type">int</span> <span class="title">get_retransmission_count</span><span class="params">()</span> <span class="type">const</span> </span>&#123; <span class="keyword">return</span> _retransmission_count; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">bool</span> <span class="title">check_timeout</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> time_elapsed, <span class="type">bool</span> incr)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!_open) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        _passby_time += time_elapsed;</span><br><span class="line">        <span class="keyword">if</span> (_passby_time &lt; _retransmission_timeout) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// Timeout.</span></span><br><span class="line">        _passby_time = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (incr) &#123;</span><br><span class="line">            _retransmission_timeout *= <span class="number">2</span>;</span><br><span class="line">            _retransmission_count += <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">reset</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> timeout)</span> </span>&#123;</span><br><span class="line">        _retransmission_count = <span class="number">0</span>;</span><br><span class="line">        _passby_time = <span class="number">0</span>;</span><br><span class="line">        _retransmission_timeout = timeout;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//! \param[in] capacity the capacity of the outgoing byte stream</span></span><br><span class="line"><span class="comment">//! \param[in] retx_timeout the initial amount of time to wait before retransmitting the oldest outstanding segment</span></span><br><span class="line"><span class="comment">//! \param[in] fixed_isn the Initial Sequence Number to use, if set (otherwise uses a random ISN)</span></span><br><span class="line">TCPSender::<span class="built_in">TCPSender</span>(<span class="type">const</span> <span class="type">size_t</span> capacity, <span class="type">const</span> <span class="type">uint16_t</span> retx_timeout, <span class="type">const</span> std::optional&lt;WrappingInt32&gt; fixed_isn)</span><br><span class="line">    : _isn(fixed_isn.<span class="built_in">value_or</span>(WrappingInt32&#123;<span class="built_in">random_device</span>()()&#125;))</span><br><span class="line">    , _initial_retransmission_timeout&#123;retx_timeout&#125;</span><br><span class="line">    , _stream(capacity) &#123;</span><br><span class="line">    _timer.<span class="built_in">set_retrans_timeout</span>(_initial_retransmission_timeout);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">uint64_t</span> <span class="title">TCPSender::bytes_in_flight</span><span class="params">()</span> <span class="type">const</span> </span>&#123; <span class="keyword">return</span> _bytes_in_flight; &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">TCPSender::fill_window</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="type">uint16_t</span> left_window_size = std::<span class="built_in">max</span>(std::<span class="built_in">uint16_t</span>(<span class="number">1</span>), _window_size);</span><br><span class="line">    left_window_size = left_window_size &gt; _bytes_in_flight ? left_window_size - _bytes_in_flight : <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (left_window_size &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="type">uint16_t</span> remain_seg_length = left_window_size;</span><br><span class="line">        TCPSegment tcp;</span><br><span class="line">        <span class="comment">// Set TCP header.</span></span><br><span class="line">        tcp.<span class="built_in">header</span>().seqno = <span class="built_in">next_seqno</span>();</span><br><span class="line">        <span class="keyword">if</span> (_next_seqno == <span class="number">0</span> &amp;&amp; remain_seg_length &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            tcp.<span class="built_in">header</span>().syn = <span class="number">1</span>;</span><br><span class="line">            remain_seg_length -= <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// Fill TCP Payload.</span></span><br><span class="line">        <span class="keyword">if</span> (remain_seg_length &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="type">size_t</span> payload_limit = std::<span class="built_in">min</span>(<span class="built_in">static_cast</span>&lt;std::<span class="type">uint16_t</span>&gt;(TCPConfig::MAX_PAYLOAD_SIZE), remain_seg_length);</span><br><span class="line">            tcp.<span class="built_in">payload</span>() = <span class="built_in">Buffer</span>(_stream.<span class="built_in">peek_output</span>(payload_limit));</span><br><span class="line">            _stream.<span class="built_in">pop_output</span>(payload_limit);</span><br><span class="line">            remain_seg_length -= tcp.<span class="built_in">payload</span>().<span class="built_in">size</span>();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// set fin.</span></span><br><span class="line">        <span class="keyword">if</span> (remain_seg_length &gt; <span class="number">0</span> &amp;&amp; _stream.<span class="built_in">eof</span>() &amp;&amp; !_sent_fin) &#123;</span><br><span class="line">            tcp.<span class="built_in">header</span>().fin = <span class="number">1</span>;</span><br><span class="line">            _sent_fin = <span class="literal">true</span>;</span><br><span class="line">            remain_seg_length -= <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// Update seg_length.</span></span><br><span class="line">        <span class="type">size_t</span> seg_length = tcp.<span class="built_in">length_in_sequence_space</span>();</span><br><span class="line">        left_window_size =</span><br><span class="line">            std::<span class="built_in">max</span>(<span class="built_in">static_cast</span>&lt;std::<span class="type">uint16_t</span>&gt;(<span class="number">0</span>), <span class="built_in">static_cast</span>&lt;std::<span class="type">uint16_t</span>&gt;(left_window_size - seg_length));</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (seg_length == <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">// No data to send, break.</span></span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Reset timer.</span></span><br><span class="line">        <span class="keyword">if</span> (_outstanding_segments.<span class="built_in">empty</span>() &amp;&amp; seg_length &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            _timer.<span class="built_in">reset</span>(_initial_retransmission_timeout);</span><br><span class="line">            _timer.<span class="built_in">open</span>();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// Insert tcp.</span></span><br><span class="line">        _segments_out.<span class="built_in">push</span>(tcp);</span><br><span class="line">        _outstanding_segments.<span class="built_in">emplace</span>(_next_seqno, tcp);</span><br><span class="line">        _bytes_in_flight += seg_length;</span><br><span class="line">        <span class="comment">// Update _next_seqno</span></span><br><span class="line">        _next_seqno += seg_length;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// If set fin, break;</span></span><br><span class="line">        <span class="keyword">if</span> (tcp.<span class="built_in">header</span>().fin) &#123;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//! \param ackno The remote receiver&#x27;s ackno (acknowledgment number)</span></span><br><span class="line"><span class="comment">//! \param window_size The remote receiver&#x27;s advertised window size</span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">TCPSender::ack_received</span><span class="params">(<span class="type">const</span> WrappingInt32 ackno, <span class="type">const</span> <span class="type">uint16_t</span> window_size)</span> </span>&#123;</span><br><span class="line">    <span class="type">uint64_t</span> abs_ackno = <span class="built_in">unwrap</span>(ackno, _isn, _next_seqno);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (abs_ackno &gt; _next_seqno) &#123;</span><br><span class="line">        <span class="comment">// Impossible ack.</span></span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    _window_size = window_size;</span><br><span class="line">    <span class="type">bool</span> ack = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Try to remove acked outstanding segments.</span></span><br><span class="line">    <span class="keyword">while</span> (!_outstanding_segments.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">        <span class="keyword">auto</span> &amp;p = _outstanding_segments.<span class="built_in">front</span>();</span><br><span class="line">        <span class="keyword">if</span> (p.first + p.second.<span class="built_in">length_in_sequence_space</span>() - <span class="number">1</span> &lt; abs_ackno) &#123;</span><br><span class="line">            _bytes_in_flight -= _outstanding_segments.<span class="built_in">front</span>().second.<span class="built_in">length_in_sequence_space</span>();</span><br><span class="line">            _outstanding_segments.<span class="built_in">pop</span>();</span><br><span class="line">            ack = <span class="literal">true</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (ack) &#123;</span><br><span class="line">        _timer.<span class="built_in">reset</span>(_initial_retransmission_timeout);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">fill_window</span>();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method</span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">TCPSender::tick</span><span class="params">(<span class="type">const</span> <span class="type">size_t</span> ms_since_last_tick)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (_timer.<span class="built_in">check_timeout</span>(ms_since_last_tick, _window_size != <span class="number">0</span>) &amp;&amp; !_outstanding_segments.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">        _segments_out.<span class="built_in">push</span>(_outstanding_segments.<span class="built_in">front</span>().second);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">unsigned</span> <span class="type">int</span> <span class="title">TCPSender::consecutive_retransmissions</span><span class="params">()</span> <span class="type">const</span> </span>&#123; <span class="keyword">return</span> _timer.<span class="built_in">get_retransmission_count</span>(); &#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">TCPSender::send_empty_segment</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    TCPSegment seg;</span><br><span class="line">    seg.<span class="built_in">header</span>().seqno = <span class="built_in">next_seqno</span>();</span><br><span class="line">    _segments_out.<span class="built_in">emplace</span>(std::<span class="built_in">move</span>(seg));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>输入 <strong>make check_lab3</strong> 即可通过全部测试。</p>
+<p><img src="https://i-blog.csdnimg.cn/direct/e40263217e3a4c83a10cf3d13162aa4b.png" alt="请添加图片描述"></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C/" rel="tag"># 计算机网络</a>
+              <a href="/tags/Sponge/" rel="tag"># Sponge</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/01/20/cs144/lab2/" rel="prev" title="CS144 Lab2 The TCP Receiver">
+                  <i class="fa fa-angle-left"></i> CS144 Lab2 The TCP Receiver
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2025/02/25/cs144/lab4/" rel="next" title="CS144 Lab4 The Summit (TCP in full)">
+                  CS144 Lab4 The Summit (TCP in full) <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    
+  <div class="comments" id="disqus_thread">
+    <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+  </div>
+  
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Chengfeng Wang</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">23k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">1:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script><script src="/js/bookmark.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="disqus" type="application/json">{"enable":true,"shortname":"wcf","count":true,"i18n":{"disqus":"disqus"}}</script>
+<script src="/js/third-party/comments/disqus.js"></script>
+
+</body>
+</html>
