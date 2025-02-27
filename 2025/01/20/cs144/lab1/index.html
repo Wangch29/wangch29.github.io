@@ -297,7 +297,7 @@
     
     
     
-    <div class="post-body" itemprop="articleBody"><meta name="referrer" content="no-referrer"/>
+    <div class="post-body" itemprop="articleBody"><meta name="referrer" content="no-referrer">
 
 <p>Lab0 体验了操作系统自带的socket的使用。接下来 Lab1 ～ Lab4 会逐步实现上图这样的一个<strong>CS144TCPSockert</strong> (socket不一定是基于TCP，也可以是UDP，所以这个叫TCPSocket)，利用不可靠的Network层实现一个可靠的传输流。</p>
 <p>Lab1实现的是<strong>StreamReassembler</strong>。如图，StreamReassembler是位于TCP接收端。从Network层接收过来的包非常杂乱，可能<strong>丢失、颠倒、重复、错误</strong>，而StreamReassembler的作用就是把这些乱七八糟的包重组成原本的模样。就像给一副混乱的扑克牌，让它给你重组成出厂的顺序。</p>
