@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Playfair+Display:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Oswald:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Source+Sans+Pro:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha256-5eIC48iZUHmSlSUz9XtjRyK2mzQkHScZY1WdMaoz74E=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.21.1","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":true,"style":"default"},"fold":{"enable":false,"height":500},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"duration":100,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.json","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="这是一个基于BusTub实现向量拓展的教程，支持向量数据类型以及相关的优化。根据这篇博客实现，具体流程如下：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="btvector">
+<meta property="og:url" content="http://example.com/2025/05/10/Bustub/btvector/index.html">
+<meta property="og:site_name" content="wcf&#39;s Blog">
+<meta property="og:description" content="这是一个基于BusTub实现向量拓展的教程，支持向量数据类型以及相关的优化。根据这篇博客实现，具体流程如下：">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/2061fa41f48141bc9893a9661e025259.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/2c416bd0dde74599866691856f66da1f.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/00dc2bf2c8d5438fa17cf61a0b5b70cc.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/763e41b6d9f0458b84b35a18ae2b1b02.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/b65d3996e48e45359316ace780e4bdf0.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/62b70630cd974c0c81d21c50dae6e679.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/851bddd36a174775a733386530dc489b.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/45c7eee50e6d4e1f976d1f8d3af212eb.png">
+<meta property="og:image" content="https://i-blog.csdnimg.cn/direct/0d83b10ca11d43d1b00ec81ff830f11f.png">
+<meta property="article:published_time" content="2025-05-10T21:58:16.222Z">
+<meta property="article:modified_time" content="2025-05-10T22:04:30.439Z">
+<meta property="article:author" content="Chengfeng Wang">
+<meta property="article:tag" content="数据库">
+<meta property="article:tag" content="Bustub">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i-blog.csdnimg.cn/direct/2061fa41f48141bc9893a9661e025259.png">
+
+
+<link rel="canonical" href="http://example.com/2025/05/10/Bustub/btvector/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2025/05/10/Bustub/btvector/","path":"2025/05/10/Bustub/btvector/","title":"btvector"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>btvector | wcf's Blog</title>
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-SKXYMFTP44"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-SKXYMFTP44');
+</script>
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="stylesheet" href="/css/prism.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">wcf's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-bustub"><a href="/categories/Bustub/" rel="section"><i class="fa-solid fa-database fa-fw"></i>Bustub</a></li><li class="menu-item menu-item-cs144"><a href="/categories/cs144/" rel="section"><i class="fa-solid fa-network-wired fa-fw"></i>cs144</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%90%91%E9%87%8F%E6%95%B0%E6%8D%AE%E5%BA%93%E4%BB%8B%E7%BB%8D"><span class="nav-number">1.</span> <span class="nav-text">向量数据库介绍</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E9%85%8D%E7%BD%AE"><span class="nav-number">2.</span> <span class="nav-text">环境配置</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Insertion-Sequential-Scan"><span class="nav-number">3.</span> <span class="nav-text">Insertion &amp; Sequential Scan</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Naive-K-Nearest-Neighbors"><span class="nav-number">4.</span> <span class="nav-text">Naive K-Nearest Neighbors</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Matching-the-Plan-Structure"><span class="nav-number">5.</span> <span class="nav-text">Matching the Plan Structure</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Vector-Index-Scan-Plan-%E4%BB%8B%E7%BB%8D"><span class="nav-number">5.1.</span> <span class="nav-text">Vector Index Scan Plan 介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Vector-Index-Scan-Plan-%E4%BC%98%E5%8C%96%E5%AE%9E%E7%8E%B0"><span class="nav-number">5.2.</span> <span class="nav-text">Vector Index Scan Plan 优化实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Bonus"><span class="nav-number">5.3.</span> <span class="nav-text">Bonus</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Inverted-File-Flat-Index"><span class="nav-number">6.</span> <span class="nav-text">Inverted File Flat Index</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%9D%E8%B7%AF"><span class="nav-number">6.1.</span> <span class="nav-text">思路</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B7%E4%BD%93%E6%B5%81%E7%A8%8B"><span class="nav-number">6.2.</span> <span class="nav-text">具体流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%81%9A%E7%B1%BB%EF%BC%88%E8%AE%AD%E7%BB%83%E9%98%B6%E6%AE%B5%EF%BC%89"><span class="nav-number">6.2.1.</span> <span class="nav-text">聚类（训练阶段）</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#K-Means-%E7%AE%97%E6%B3%95%E7%9B%AE%E6%A0%87%E5%92%8C%E6%95%B0%E5%AD%A6%E8%A1%A8%E8%BE%BE"><span class="nav-number">6.2.1.1.</span> <span class="nav-text">K-Means 算法目标和数学表达</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#K-Means-%E7%AE%97%E6%B3%95%E6%B5%81%E7%A8%8B"><span class="nav-number">6.2.1.2.</span> <span class="nav-text">K-Means 算法流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#K-Means"><span class="nav-number">6.2.1.3.</span> <span class="nav-text">K-Means++</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9E%84%E5%BB%BA%E5%80%92%E6%8E%92%E8%A1%A8%EF%BC%88%E7%B4%A2%E5%BC%95%E9%98%B6%E6%AE%B5%EF%BC%89"><span class="nav-number">6.2.2.</span> <span class="nav-text">构建倒排表（索引阶段）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E8%AF%A2%E6%B5%81%E7%A8%8B%EF%BC%88ANN-%E6%90%9C%E7%B4%A2%EF%BC%89"><span class="nav-number">6.2.3.</span> <span class="nav-text">查询流程（ANN 搜索）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E5%8F%82%E6%95%B0"><span class="nav-number">6.2.4.</span> <span class="nav-text">常见参数</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0"><span class="nav-number">6.3.</span> <span class="nav-text">实现</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Hierarchical-Navigable-Small-Worlds"><span class="nav-number">7.</span> <span class="nav-text">Hierarchical Navigable Small Worlds</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8B%E7%BB%8D"><span class="nav-number">7.1.</span> <span class="nav-text">介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0-1"><span class="nav-number">7.2.</span> <span class="nav-text">实现</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Hierarchical-Navigable-Small-World"><span class="nav-number">8.</span> <span class="nav-text">Hierarchical Navigable Small World</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%9D%E8%B7%AF-1"><span class="nav-number">8.1.</span> <span class="nav-text">思路</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0-2"><span class="nav-number">8.2.</span> <span class="nav-text">实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E6%89%BE"><span class="nav-number">8.2.1.</span> <span class="nav-text">查找</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8F%92%E5%85%A5"><span class="nav-number">8.2.2.</span> <span class="nav-text">插入</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81"><span class="nav-number">8.3.</span> <span class="nav-text">代码</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Chengfeng Wang"
+      src="/uploads/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">Chengfeng Wang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/Wangch29" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;Wangch29" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:wangch0209@gmail.com" title="E-Mail → mailto:wangch0209@gmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/05/10/Bustub/btvector/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/uploads/avatar.jpeg">
+      <meta itemprop="name" content="Chengfeng Wang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcf's Blog">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="btvector | wcf's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          btvector
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2025-05-10 17:58:16 / 修改时间：18:04:30" itemprop="dateCreated datePublished" datetime="2025-05-10T17:58:16-04:00">2025-05-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Bustub/" itemprop="url" rel="index"><span itemprop="name">Bustub</span></a>
+        </span>
+    </span>
+
+  
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2025/05/10/Bustub/btvector/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2025/05/10/Bustub/btvector/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>32 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><meta name="referrer" content="no-referrer">
+
+<p>这是一个基于BusTub实现向量拓展的教程，支持向量数据类型以及相关的优化。根据<a target="_blank" rel="noopener" href="https://skyzh.github.io/write-you-a-vector-db/cpp-01-overview.html">这篇博客</a>实现，具体流程如下：<br><img src="https://i-blog.csdnimg.cn/direct/2061fa41f48141bc9893a9661e025259.png" alt="请添加图片描述"></p>
+<span id="more"></span>
+
+<h1 id="向量数据库介绍"><a href="#向量数据库介绍" class="headerlink" title="向量数据库介绍"></a>向量数据库介绍</h1><p>向量就可以理解为c++中的vector，比如[1, 2, 3]。</p>
+<p>而原版的Bustub（或者传统关系型数据库）会有多种数据类型，比如<strong>int，float，varchar….</strong></p>
+<p>而向量数据库就是对其新增加一个数据类型，<strong>vector</strong>。</p>
+<p>例如，在支持向量类型的数据库中，可以这样定义和插入数据：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> embeddings (</span><br><span class="line">    id <span class="keyword">primary</span> key,</span><br><span class="line">    embedding vector(<span class="number">3</span>)</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> embeddings (embedding) <span class="keyword">values</span> (<span class="string">&#x27;[1.0, 2.0, 3.0]&#x27;</span>);</span><br></pre></td></tr></table></figure>
+<p>这就建立一个vector数据类型embedding，embedding 是一列，类型为 vector(3)，表示一个包含 3 个浮点数的向量。可以往里插入值 **[1.0, 2.0, 3.0]**。</p>
+<p>如果使用传统的关系型数据库 schema，通常需要这样展开成多列：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> embeddings (</span><br><span class="line">    id <span class="keyword">primary</span> key,</span><br><span class="line">    v1 <span class="type">float</span>,</span><br><span class="line">    v2 <span class="type">float</span>,</span><br><span class="line">    v3 <span class="type">float</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> embeddings <span class="keyword">values</span> (<span class="number">1.0</span>, <span class="number">2.0</span>, <span class="number">3.0</span>);</span><br></pre></td></tr></table></figure>
+
+<p>换句话说，向量数据类型就是<strong>把原本的三个float数据类型的列合并封装成一个数据类型vector整体。</strong></p>
+<p>乍一看这貌似没啥特别的，不就新增一个数据类型吗？，三列还是一列似乎区别不大，用得把整个数据库都改名成”向量“数据库吗？</p>
+<p>而事实不止于此，向量数据库的核心是，<strong>对向量这个数据类型相关的操作进行大量的优化，极大提升向量操作的效率。</strong></p>
+<p>比如：</p>
+<ul>
+<li><strong>统一的向量数据模型</strong>：向量作为一个整体存储和管理，支持高维数据。</li>
+<li><strong>高效的向量运算</strong>：原生支持向量间的相似度计算（L2距离、余弦相似度、内积等）。</li>
+<li><strong>专用的向量索引结构</strong>：如 IVFFlat、HNSW、DiskANN 等，使得向量检索在百万到亿级规模的数据中依然可以快速响应。</li>
+<li><strong>更好的存储布局</strong>：连续内存存储向量，提高了访问局部性和 CPU cache 命中率。</li>
+</ul>
+<p>不仅是新增了一个vector数据类型，更是从数据组织、查询优化、索引加速等各个方面，为处理大规模高维向量数据进行了深度定制。</p>
+<p>随着机器学习、推荐系统、检索系统的发展，对高效向量检索的需求不断增加，向量数据库已经成为支撑这些应用的重要基础设施。</p>
+<p>一句话总结： <strong>向量数据库就是支持vector数据类型，并在此基础上对vector类型相关操作进行极大的优化。</strong></p>
+<p>所以让bustub支持向量化思路也很清晰了，先支持新的向量数据库类型（这个容易），再一步步对有关向量的操作进行优化。</p>
+<h1 id="环境配置"><a href="#环境配置" class="headerlink" title="环境配置"></a>环境配置</h1><p>教程建议clone新的repo，但我是直接基于我之前完成的四个project，截止目前这个分支只有七个新commit，所以建议直接一个个commit用 git cherry-pick来一步步同步，这样也可以清楚新增加了哪些东西。</p>
+<p>本地增加对方为远程repo：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git remote add vectordb git@github.com:skyzh/bustub-vectordb.git</span><br></pre></td></tr></table></figure>
+
+<p>然后拉远程库的分支</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git fetch vectordb</span><br></pre></td></tr></table></figure>
+
+<p>然后即可看到对方分支</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git branch -r</span><br></pre></td></tr></table></figure>
+
+<p>查看你想合并的分支（main）</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git checkout -b merge-vectordb vectordb/main</span><br></pre></td></tr></table></figure>
+<p>这会在本地建立一个分支merge-vectordb，指向 vectordb&#x2F;vectorized。</p>
+<p>本地新建一个专门用来实现矢量化的分支</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git switch -c feature/vectordb</span><br></pre></td></tr></table></figure>
+
+<p>然后就可以一步步用cherry-pick合并，在本地或者github都可以找到fork之后的七个新commit，github上看会清晰很多，比如合并第一个message为“stub code for bpm and table heap”的commit：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git cherry-pick cc270104687b2f673f26c9490642140ef0fe491f</span><br></pre></td></tr></table></figure>
+
+<p>然后根据自己的实现解决conflict再合并下一个即可。最后git graph类似：<br><img src="https://i-blog.csdnimg.cn/direct/2c416bd0dde74599866691856f66da1f.png" alt="请添加图片描述"><br>main&#x2F;origin 就是我合并前，feature&#x2F;vector-db就是我合并后的。</p>
+<p>然后就可以编译运行：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cmake -B build</span><br><span class="line">cd build</span><br><span class="line">make -j10 shell sqllogictest</span><br></pre></td></tr></table></figure>
+<p>编译了bustub shell, 就可以运行创建向量命令了：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./bin/bustub-shell</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">❯ ./bin/bustub-shell</span><br><span class="line">Welcome to the BusTub shell! Type \help to learn more.</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">bustub&gt; </span><span class="language-bash"><span class="keyword">select</span> array [1.0, 2.0, 3.0];</span></span><br><span class="line">+-------------+</span><br><span class="line">| __unnamed#0 |</span><br><span class="line">+-------------+</span><br><span class="line">| [1,2,3]     |</span><br><span class="line">+-------------+</span><br><span class="line"><span class="meta prompt_">bustub&gt; </span></span><br></pre></td></tr></table></figure>
+<h1 id="Insertion-Sequential-Scan"><a href="#Insertion-Sequential-Scan" class="headerlink" title="Insertion &amp; Sequential Scan"></a>Insertion &amp; Sequential Scan</h1><p><strong>vector_expression.h</strong>中补齐几个基本的向量运算：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">inline</span> <span class="keyword">auto</span> <span class="title">InnerProduct</span><span class="params">(<span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;left, <span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;right)</span> -&gt; <span class="type">double</span> </span>&#123;</span><br><span class="line">  <span class="type">double</span> ip = <span class="number">0.0</span>;</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; left.<span class="built_in">size</span>(); ++i) &#123;</span><br><span class="line">    ip += left[i] * right[i];</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> ip;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">inline</span> <span class="keyword">auto</span> <span class="title">VectorNorm</span><span class="params">(<span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;v)</span> -&gt; <span class="type">double</span> </span>&#123;</span><br><span class="line">  <span class="type">double</span> norm = <span class="number">0.0</span>;</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">double</span> x : v) &#123;</span><br><span class="line">    norm += std::<span class="built_in">pow</span>(x, <span class="number">2</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> std::<span class="built_in">pow</span>(norm, <span class="number">0.5</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">inline</span> <span class="keyword">auto</span> <span class="title">ClampNearZero</span><span class="params">(<span class="type">double</span> number)</span> -&gt; <span class="type">double</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> std::<span class="built_in">abs</span>(number) &lt; <span class="number">1e-8</span> ? <span class="number">0.0</span> : number;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">inline</span> <span class="keyword">auto</span> <span class="title">ComputeDistance</span><span class="params">(<span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;left, <span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;right,</span></span></span><br><span class="line"><span class="params"><span class="function">                            VectorExpressionType dist_fn)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">auto</span> sz = left.<span class="built_in">size</span>();</span><br><span class="line">  <span class="built_in">BUSTUB_ASSERT</span>(sz == right.<span class="built_in">size</span>(), <span class="string">&quot;vector length mismatched!&quot;</span>);</span><br><span class="line">  <span class="keyword">switch</span> (dist_fn) &#123;</span><br><span class="line">    <span class="keyword">case</span> VectorExpressionType::L2Dist: &#123;</span><br><span class="line">      <span class="type">double</span> l2d = <span class="number">0.0</span>;</span><br><span class="line">      <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; sz; ++i) &#123;</span><br><span class="line">        l2d += std::<span class="built_in">pow</span>(left[i] - right[i], <span class="number">2</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">return</span> <span class="built_in">ClampNearZero</span>(std::<span class="built_in">pow</span>(l2d, <span class="number">0.5</span>));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">case</span> VectorExpressionType::InnerProduct: &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="built_in">ClampNearZero</span>(- <span class="built_in">InnerProduct</span>(left, right));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">case</span> VectorExpressionType::CosineSimilarity: &#123;</span><br><span class="line">      <span class="type">double</span> norm_left = <span class="built_in">VectorNorm</span>(left);</span><br><span class="line">      <span class="type">double</span> norm_right = <span class="built_in">VectorNorm</span>(right);</span><br><span class="line">      <span class="keyword">if</span> (norm_left == <span class="number">0</span> || norm_right == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">// One of the vectors is zero vector.</span></span><br><span class="line">        <span class="keyword">return</span> <span class="number">1.0</span>;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">return</span> <span class="built_in">ClampNearZero</span>(<span class="number">1.0</span> - <span class="built_in">InnerProduct</span>(left, right) / (norm_left * norm_right));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">default</span>:</span><br><span class="line">      <span class="built_in">BUSTUB_ASSERT</span>(<span class="literal">false</span>, <span class="string">&quot;Unsupported vector expr type.&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>只要merge正确，那么此时你之前实现的insertion_executor和seq_scan_executor都可以使用。运行</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./bin/bustub-sqllogictest ../test/sql/vector.01-insert-scan.slt --verbose    </span><br></pre></td></tr></table></figure>
+
+<p>即可通过测试。</p>
+<p>而这里新增了一个<strong>Vector_Index_Scan_Executor</strong>, 就是利用向量索引进行扫描的执行器，应该是已经帮你实现好了，只不过不支持MVCC。</p>
+<h1 id="Naive-K-Nearest-Neighbors"><a href="#Naive-K-Nearest-Neighbors" class="headerlink" title="Naive K-Nearest Neighbors"></a>Naive K-Nearest Neighbors</h1><p>且看这句sql：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE t1(v1 VECTOR(3), v2 <span class="built_in">integer</span>);</span><br><span class="line">SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] &lt;-&gt; v1 LIMIT 3;</span><br></pre></td></tr></table></figure>
+
+<p>这就是试图寻找表t1中距离<strong>ARRAY [1.0, 1.0, 1.0]</strong> 最近的三个vector。</p>
+<p><strong>Naive KNN</strong> 在向量数据库里指的是一种最基础的<strong>最近邻搜索方法</strong>，特点是：</p>
+<ul>
+<li><strong>遍历</strong>所有数据点（Brute Force）</li>
+<li>计算查询向量到每个数据点的<strong>距离</strong></li>
+<li>取距离最近的<strong>前K个</strong></li>
+</ul>
+<p>也就是说，不管数据库里有多少个向量，每次查询都会<strong>全量扫描一遍。</strong></p>
+<p>由于之前实现过sort，limit，topN，这里仍然不需要任何更改，直接可以通过测试。(怎么感觉啥也没干。。。）</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">make -j8 sqllogictest</span><br><span class="line">./bin/bustub-sqllogictest ../test/sql/vector.02-naive-knn.slt --verbose</span><br></pre></td></tr></table></figure>
+
+<h1 id="Matching-the-Plan-Structure"><a href="#Matching-the-Plan-Structure" class="headerlink" title="Matching the Plan Structure"></a>Matching the Plan Structure</h1><p>正如我最开始将的逻辑，先支持了向量数据类型的操作，紧接着就是对其相关操作进行优化了。</p>
+<p>如果数据库里有<strong>几百万、上亿个</strong>向量，你想找“<strong>跟查询向量最接近的K个</strong>”，每次都暴力扫一遍所有向量，就会非常慢。这时候，就需要一种特殊的索引结构，能对<strong>向量距离计算</strong>极大加速。</p>
+<h2 id="Vector-Index-Scan-Plan-介绍"><a href="#Vector-Index-Scan-Plan-介绍" class="headerlink" title="Vector Index Scan Plan 介绍"></a>Vector Index Scan Plan 介绍</h2><p>接下来实现对vector进行索引扫描，实现一个新的优化器规则，将<strong>seq_scan</strong>优化成<strong>Vector Index Scan</strong>。</p>
+<p>需要的结果大概是：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">EXPLAIN (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] &lt;-&gt; v1 LIMIT 2;</span><br><span class="line">=== OPTIMIZER ===</span><br><span class="line">TopN &#123; n=2, order_bys=[(&quot;Default&quot;, &quot;l2_dist([1.000000,1.000000,1.000000], #0.0)&quot;)]&#125;</span><br><span class="line">  Projection &#123; exprs=[&quot;#0.0&quot;] &#125;</span><br><span class="line">    SeqScan &#123; table=t1 &#125;</span><br></pre></td></tr></table></figure>
+<p>优化后：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">EXPLAIN (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] &lt;-&gt; v1 LIMIT 2;</span><br><span class="line">=== OPTIMIZER ===</span><br><span class="line">Projection &#123; exprs=[&quot;#0.0&quot;] &#125;</span><br><span class="line">  VectorIndexScan &#123; index_oid=1, index_name=t1v1hnsw, table_oid=24, table_name=t1</span><br><span class="line">  base_vector=[1.000000,1.000000,1.000000], limit=2 &#125;</span><br></pre></td></tr></table></figure>
+
+<p>即将<strong>TopN</strong>节点和<strong>SeqScan</strong>节点合并成<strong>VectorIndexScan</strong>节点。利用TopN中的距离函数走对应索引，直接扫描两个tuple即可而不用全表扫描，极大提升效率。</p>
+<p>但TopN和SeqScan不一定是挨着的，这俩节点之间的位置有三种基本情况：</p>
+<p><strong>Case 1：TopN和SeqScan紧挨着</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">TopN &#123; n=2, order_bys=[(&quot;Default&quot;, &quot;l2_dist([1.000000,1.000000,1.000000], #0.0)&quot;)]&#125;</span><br><span class="line">  SeqScan &#123; table=t1 &#125;</span><br></pre></td></tr></table></figure>
+<p>最简单的情况。</p>
+<p><strong>Case 2: TopN紧接着一个Projection</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">TopN &#123; n=2, order_bys=[(&quot;Default&quot;, &quot;l2_dist([1.000000,1.000000,1.000000], #0.0)&quot;)]&#125;</span><br><span class="line">  Projection &#123; exprs=[&quot;#0.0&quot;, &quot;l2_dist([1.000000,1.000000,1.000000], #0.0)&quot;] &#125;</span><br><span class="line">    SeqScan &#123; table=t1 &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>Case 3：TopN紧接着一个Projection且其改变了列的顺序</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">TopN &#123; n=2, order_bys=[(&quot;Default&quot;, &quot;l2_dist([1.000000,1.000000,1.000000], #0.1)&quot;)]&#125;</span><br><span class="line">  Projection &#123; exprs=[&quot;#0.1&quot;, &quot;#0.0&quot;] &#125;</span><br><span class="line">    SeqScan &#123; table=t1 &#125;</span><br></pre></td></tr></table></figure>
+
+<p>总而言之，就是遇到这样的结构就可以尝试优化成VectorIndexScan：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">   TopN</span><br><span class="line">    |</span><br><span class="line">Projection (optional)</span><br><span class="line">    |</span><br><span class="line"> seq_scan </span><br></pre></td></tr></table></figure>
+<p>因为之前实现了 <strong>Predicate Pushdown</strong> 和 <strong>合并filter&amp;SeqScan</strong>，所以应该没有遗漏情况。</p>
+<p>于是逻辑就很清晰了，跟之前Project3部分的差不多，从上往下遍历PlanTree，直到遇到<strong>TopN - Projection（可有可无）- seq_scan</strong> 的节点子树即可尝试优化。</p>
+<p>从TopN的<strong>order_bys</strong>条件中提取<strong>向量距离表达式</strong>（比如l2_dist)。从TopN中获取向量在tuple中的<strong>col_idx</strong>, 如果经过projection节点，检查其是否<strong>改变了col_idx</strong>。</p>
+<h2 id="Vector-Index-Scan-Plan-优化实现"><a href="#Vector-Index-Scan-Plan-优化实现" class="headerlink" title="Vector Index Scan Plan 优化实现"></a>Vector Index Scan Plan 优化实现</h2><p>绝大部分只需改动 <strong>vector_index_scan.cpp</strong>。</p>
+<p>先实现一个helper function，用于寻找匹配的vector index。其可根据条件，搜索一个table是否有可以使用的vector index，有的话返回index，否则返回nullptr。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief Match vector_index of a table by col_idx, VectorExpressionType and vector_index_match_method.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * @param dist_fn &#123;L2Dist, InnerProduct, CosineSimilarity&#125;</span></span><br><span class="line"><span class="comment"> * @param vector_index_match_method </span></span><br><span class="line"><span class="comment"> * - unset or empty: match the first vector index available.</span></span><br><span class="line"><span class="comment"> * - hnsw: only match the HNSW index.</span></span><br><span class="line"><span class="comment"> * - ivfflat: only match the IVFFlat index.</span></span><br><span class="line"><span class="comment"> * - none: do not match any index and do exact nearest-neighbor search.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">MatchVectorIndex</span><span class="params">(<span class="type">const</span> Catalog &amp;catalog, <span class="type">table_oid_t</span> table_oid, <span class="type">uint32_t</span> col_idx, VectorExpressionType dist_fn,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="type">const</span> std::string &amp;vector_index_match_method)</span> -&gt; <span class="type">const</span> IndexInfo * </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (vector_index_match_method == <span class="string">&quot;none&quot;</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nullptr</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="type">const</span> <span class="keyword">auto</span> table_info_ptr = catalog.<span class="built_in">GetTable</span>(table_oid);</span><br><span class="line">  <span class="keyword">if</span> (table_info_ptr == <span class="literal">nullptr</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nullptr</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">auto</span> index_infos = catalog.<span class="built_in">GetTableIndexes</span>(table_info_ptr-&gt;name_);</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">for</span> (<span class="type">const</span> <span class="keyword">auto</span> idx_info : index_infos) &#123;</span><br><span class="line">    <span class="keyword">if</span> (idx_info == <span class="literal">nullptr</span>) &#123;</span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// Key has only one column, and should be col_idx.</span></span><br><span class="line">    <span class="keyword">if</span> (idx_info-&gt;index_-&gt;<span class="built_in">GetIndexColumnCount</span>() != <span class="number">1</span> || idx_info-&gt;index_-&gt;<span class="built_in">GetKeyAttrs</span>()[<span class="number">0</span>] != col_idx) &#123;</span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="type">const</span> <span class="keyword">auto</span> vector_index = <span class="built_in">dynamic_cast</span>&lt;VectorIndex *&gt;(idx_info-&gt;index_.<span class="built_in">get</span>());</span><br><span class="line">    <span class="keyword">if</span> (vector_index != <span class="literal">nullptr</span> &amp;&amp; vector_index-&gt;distance_fn_ == dist_fn) &#123;</span><br><span class="line">      <span class="keyword">if</span> (vector_index_match_method.<span class="built_in">empty</span>() || vector_index_match_method == <span class="string">&quot;unset&quot;</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> idx_info;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">if</span> (vector_index_match_method == <span class="string">&quot;hnsw&quot;</span> &amp;&amp; <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> HNSWIndex *&gt;(vector_index) != <span class="literal">nullptr</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> idx_info; </span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">if</span> (vector_index_match_method == <span class="string">&quot;ivfflat&quot;</span> &amp;&amp; <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> IVFFlatIndex *&gt;(vector_index) != <span class="literal">nullptr</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> idx_info;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> <span class="literal">nullptr</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>然后先实现 <strong>Case1</strong> 的情况，即 <strong>TopN - SeqScan</strong> </p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">Optimizer::OptimizeAsVectorIndexScan</span><span class="params">(<span class="type">const</span> AbstractPlanNodeRef &amp;plan)</span> -&gt; AbstractPlanNodeRef </span>&#123;</span><br><span class="line">  std::vector&lt;AbstractPlanNodeRef&gt; children;</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">const</span> <span class="keyword">auto</span> &amp;child : plan-&gt;<span class="built_in">GetChildren</span>()) &#123;</span><br><span class="line">    children.<span class="built_in">emplace_back</span>(<span class="built_in">OptimizeAsVectorIndexScan</span>(child));</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">auto</span> optimized_plan = plan-&gt;<span class="built_in">CloneWithChildren</span>(std::<span class="built_in">move</span>(children));</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Encounter structure like:</span></span><br><span class="line">  <span class="comment">//    TopN</span></span><br><span class="line">  <span class="comment">//     |</span></span><br><span class="line">  <span class="comment">// Projection (optional)</span></span><br><span class="line">  <span class="comment">//     |</span></span><br><span class="line">  <span class="comment">//  seq_scan </span></span><br><span class="line">  <span class="comment">//</span></span><br><span class="line">  <span class="comment">// It can be optimized to VectorINdexScan.</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (optimized_plan-&gt;<span class="built_in">GetType</span>() != PlanType::TopN) &#123;</span><br><span class="line">    <span class="keyword">return</span> optimized_plan;  <span class="comment">// Not TopN, directly return.</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">auto</span> topn_plan = <span class="built_in">dynamic_cast</span>&lt;TopNPlanNode &amp;&gt;(*optimized_plan);</span><br><span class="line">  <span class="keyword">auto</span> order_bys = topn_plan.<span class="built_in">GetOrderBy</span>();</span><br><span class="line">  <span class="keyword">if</span> (order_bys.<span class="built_in">size</span>() != <span class="number">1</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> optimized_plan;  <span class="comment">// todo: Now, only care about one order_by.</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  VectorExpressionType vector_expr_type = VectorExpressionType::UnKnown;</span><br><span class="line">  std::shared_ptr&lt;<span class="type">const</span> ArrayExpression&gt; base_vector;</span><br><span class="line">  <span class="type">uint32_t</span> col_idx = <span class="number">-1U</span>;</span><br><span class="line">  <span class="keyword">if</span> (!<span class="built_in">ExtractVectorScanParams</span>(order_bys[<span class="number">0</span>], vector_expr_type, base_vector, col_idx)) &#123;</span><br><span class="line">    <span class="keyword">return</span> optimized_plan;  <span class="comment">// Not valid vector expression.</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// auto &amp;pre_plan = topn_plan;</span></span><br><span class="line">  <span class="keyword">auto</span> cur_plan = topn_plan.<span class="built_in">GetChildPlan</span>();</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Projection layer.</span></span><br><span class="line">  <span class="keyword">if</span> (cur_plan-&gt;<span class="built_in">GetType</span>() == PlanType::Projection) &#123;</span><br><span class="line">    <span class="keyword">return</span> optimized_plan; <span class="comment">// todo: </span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Seq_scan layer.</span></span><br><span class="line">  <span class="keyword">if</span> (cur_plan-&gt;<span class="built_in">GetType</span>() == PlanType::SeqScan) &#123;</span><br><span class="line">    <span class="keyword">auto</span> &amp;seq_scan_plan = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> SeqScanPlanNode &amp;&gt;(*cur_plan);</span><br><span class="line">    <span class="type">const</span> <span class="keyword">auto</span> index_info = <span class="built_in">MatchVectorIndex</span>(catalog_, seq_scan_plan.<span class="built_in">GetTableOid</span>(), col_idx, vector_expr_type, vector_index_match_method_);</span><br><span class="line">	<span class="keyword">if</span> (index_info == <span class="literal">nullptr</span>) &#123;</span><br><span class="line">	  <span class="keyword">return</span> optimized_plan;</span><br><span class="line">  	&#125;</span><br><span class="line">    <span class="keyword">auto</span> vector_indexscan_plan = std::<span class="built_in">make_shared</span>&lt;VectorIndexScanPlanNode&gt;(topn_plan.output_schema_, </span><br><span class="line">      seq_scan_plan.<span class="built_in">GetTableOid</span>(), seq_scan_plan.table_name_, index_info-&gt;index_oid_, </span><br><span class="line">      index_info-&gt;index_-&gt;<span class="built_in">GetName</span>(), base_vector,topn_plan.<span class="built_in">GetN</span>());</span><br><span class="line">    <span class="keyword">return</span> vector_indexscan_plan;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> optimized_plan;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到我目前只考虑了最简单的情况，即TopN中的order_bys只有一个pair。也不考虑prediction。</p>
+<p>我把从一个order_by对中提取构造信息的功能封装成单独的函数:</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">static</span> <span class="keyword">auto</span> <span class="title">ExtractVectorScanParams</span><span class="params">(<span class="type">const</span> std::pair&lt;OrderByType, AbstractExpressionRef&gt; &amp;order_by, </span></span></span><br><span class="line"><span class="params"><span class="function">                                    VectorExpressionType &amp;vector_expr_type,</span></span></span><br><span class="line"><span class="params"><span class="function">                                    std::shared_ptr&lt;<span class="type">const</span> ArrayExpression&gt; &amp;base_vector, </span></span></span><br><span class="line"><span class="params"><span class="function">                                    <span class="type">uint32_t</span> &amp;col_idx)</span> -&gt; <span class="type">bool</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (order_by.first != OrderByType::DEFAULT &amp;&amp; order_by.first != OrderByType::ASC) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;  <span class="comment">// vector index scan does not support descending order.</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="type">const</span> <span class="keyword">auto</span> vector_expr = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> VectorExpression *&gt;(order_by.second.<span class="built_in">get</span>());</span><br><span class="line">  <span class="keyword">if</span> (vector_expr == <span class="literal">nullptr</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  vector_expr_type = vector_expr-&gt;expr_type_;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">auto</span> left = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> ArrayExpression *&gt;(vector_expr-&gt;<span class="built_in">GetChildAt</span>(<span class="number">0</span>).<span class="built_in">get</span>());</span><br><span class="line">  <span class="keyword">auto</span> left_col_expr = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> ColumnValueExpression *&gt;(vector_expr-&gt;<span class="built_in">GetChildAt</span>(<span class="number">0</span>).<span class="built_in">get</span>());</span><br><span class="line">  <span class="keyword">auto</span> right = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> ArrayExpression *&gt;(vector_expr-&gt;<span class="built_in">GetChildAt</span>(<span class="number">1</span>).<span class="built_in">get</span>());</span><br><span class="line">  <span class="keyword">auto</span> right_col_expr = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> ColumnValueExpression *&gt;(vector_expr-&gt;<span class="built_in">GetChildAt</span>(<span class="number">1</span>).<span class="built_in">get</span>());</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (left != <span class="literal">nullptr</span> &amp;&amp; right_col_expr != <span class="literal">nullptr</span>) &#123;</span><br><span class="line">    base_vector = std::<span class="built_in">dynamic_pointer_cast</span>&lt;<span class="type">const</span> ArrayExpression&gt;(</span><br><span class="line">      std::<span class="built_in">shared_ptr</span>&lt;AbstractExpression&gt;(left-&gt;<span class="built_in">CloneWithChildren</span>(left-&gt;<span class="built_in">GetChildren</span>()))</span><br><span class="line">    );</span><br><span class="line">    col_idx = right_col_expr-&gt;<span class="built_in">GetColIdx</span>();</span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (right != <span class="literal">nullptr</span> &amp;&amp; left_col_expr != <span class="literal">nullptr</span>) &#123;</span><br><span class="line">    base_vector = std::<span class="built_in">dynamic_pointer_cast</span>&lt;<span class="type">const</span> ArrayExpression&gt;(</span><br><span class="line">      std::<span class="built_in">shared_ptr</span>&lt;AbstractExpression&gt;(right-&gt;<span class="built_in">CloneWithChildren</span>(right-&gt;<span class="built_in">GetChildren</span>()))</span><br><span class="line">    );</span><br><span class="line">    col_idx = left_col_expr-&gt;<span class="built_in">GetColIdx</span>();</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>此时，即可对<strong>Case1</strong> 情况进行优化。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;main&gt;:13</span><br><span class="line">EXPLAIN (o) SELECT * FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] &lt;-&gt; v1 LIMIT 2;</span><br><span class="line">----</span><br><span class="line">=== OPTIMIZER ===</span><br><span class="line">VectorIndexScan &#123; index_oid=1, index_name=t1v1hnsw, table_oid=24, table_name=t1</span><br><span class="line">base_vector=[1.000000,1.000000,1.000000], limit=2 &#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来实现<strong>Case2</strong>，在我已经留下的位置补上Projection相关操作即可：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">... ...</span><br><span class="line"></span><br><span class="line">  AbstractPlanNodeRef projection_node = <span class="literal">nullptr</span>;</span><br><span class="line">  <span class="keyword">auto</span> cur_plan = topn_plan.<span class="built_in">GetChildPlan</span>();</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Projection layer.</span></span><br><span class="line">  <span class="keyword">if</span> (cur_plan-&gt;<span class="built_in">GetType</span>() == PlanType::Projection) &#123;</span><br><span class="line">    <span class="keyword">auto</span> projection_plan = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> ProjectionPlanNode *&gt;(cur_plan.<span class="built_in">get</span>());</span><br><span class="line">    projection_node = cur_plan;</span><br><span class="line">    cur_plan = projection_plan-&gt;<span class="built_in">GetChildPlan</span>();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">... ...</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (projection_node != <span class="literal">nullptr</span>) &#123;</span><br><span class="line">      <span class="keyword">return</span> projection_node-&gt;<span class="built_in">CloneWithChildren</span>(&#123;vector_indexscan_plan&#125;);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> vector_indexscan_plan;</span><br><span class="line"></span><br><span class="line">... ...</span><br></pre></td></tr></table></figure>
+
+<p>即可优化<strong>Case2</strong>的情况：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&lt;main&gt;:10</span><br><span class="line">EXPLAIN (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] &lt;-&gt; v1 LIMIT 2;</span><br><span class="line">----</span><br><span class="line">=== OPTIMIZER ===</span><br><span class="line">Projection &#123; exprs=[&quot;#0.0&quot;] &#125;</span><br><span class="line">  VectorIndexScan &#123; index_oid=1, index_name=t1v1hnsw, table_oid=24, table_name=t1 base_vector=[1.000000,1.000000,1.000000], limit=2 &#125;</span><br><span class="line"></span><br><span class="line">&lt;main&gt;:16</span><br><span class="line">EXPLAIN (o) SELECT v1, ARRAY [1.0, 1.0, 1.0] &lt;-&gt; v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] &lt;-&gt; v1 LIMIT 2;</span><br><span class="line">----</span><br><span class="line">=== OPTIMIZER ===</span><br><span class="line">Projection &#123; exprs=[&quot;#0.0&quot;, &quot;l2_dist([1.000000,1.000000,1.000000], #0.0)&quot;] &#125;</span><br><span class="line">  VectorIndexScan &#123; index_oid=1, index_name=t1v1hnsw, table_oid=24, table_name=t1 base_vector=[1.000000,1.000000,1.000000], limit=2 &#125;</span><br></pre></td></tr></table></figure>
+
+<p>而最难的<strong>case3</strong>：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&lt;main&gt;:19</span><br><span class="line">EXPLAIN (o) SELECT v2, v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] &lt;-&gt; v1 LIMIT 2;</span><br><span class="line">----</span><br><span class="line">=== OPTIMIZER ===</span><br><span class="line">TopN &#123; n=2, order_bys=[(&quot;Default&quot;, &quot;l2_dist([1.000000,1.000000,1.000000], #0.1)&quot;)]&#125;</span><br><span class="line">  Projection &#123; exprs=[&quot;#0.1&quot;, &quot;#0.0&quot;] &#125;</span><br><span class="line">    SeqScan &#123; table=t1 &#125;</span><br></pre></td></tr></table></figure>
+
+<p>目前无法优化。</p>
+<p>因为可以看到，从TopN中可以锁定<strong>col_idx为1</strong>，而Projection节点<strong>重新映射col_idx成0</strong>，所以在seq_scan中实际需要寻找的是<strong>col_idx&#x3D;0对应列的索引</strong>，而根据我目前的实现，仍然找的是<strong>col_idx&#x3D;1对应的索引</strong>。而col_idx&#x3D;1的列根本不是Vector，所以<strong>MatchVectorIndex</strong> 函数自然找不到匹配的索引，所以就会返回nullptr而无法优化。</p>
+<p>所以我们要做的就是在 <strong>Projection layer</strong> 中查看<strong>是否需要重新映射col_idx</strong>。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Projection layer.</span></span><br><span class="line"><span class="keyword">if</span> (cur_plan-&gt;<span class="built_in">GetType</span>() == PlanType::Projection) &#123;</span><br><span class="line">  projection_node = cur_plan;</span><br><span class="line">  <span class="keyword">auto</span> projection_plan = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> ProjectionPlanNode *&gt;(cur_plan.<span class="built_in">get</span>());</span><br><span class="line">  cur_plan = projection_plan-&gt;<span class="built_in">GetChildPlan</span>();</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Re-map col_idx.</span></span><br><span class="line">  <span class="built_in">BUSTUB_ASSERT</span>(col_idx &lt; projection_plan-&gt;<span class="built_in">GetExpressions</span>().<span class="built_in">size</span>(), <span class="string">&quot;col_idx greater than projection.&quot;</span>);</span><br><span class="line">  <span class="keyword">auto</span> col_proj_expr = projection_plan-&gt;<span class="built_in">GetExpressions</span>()[col_idx];</span><br><span class="line">  <span class="keyword">auto</span> col_column_value_expr = <span class="built_in">dynamic_cast</span>&lt;ColumnValueExpression *&gt;(col_proj_expr.<span class="built_in">get</span>());</span><br><span class="line">  <span class="keyword">if</span> (col_column_value_expr == <span class="literal">nullptr</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> optimized_plan;  <span class="comment">// Not direct projecting expression, do not support optimizing.</span></span><br><span class="line">  &#125;</span><br><span class="line">  col_idx = col_column_value_expr-&gt;<span class="built_in">GetColIdx</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>增加re-map后，即可通过所有测试：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/bin/bustub-sqllogictest ../test/sql/vector.03-index-selection.slt --verbose</span><br></pre></td></tr></table></figure>
+
+<h2 id="Bonus"><a href="#Bonus" class="headerlink" title="Bonus"></a>Bonus</h2><p>这个部分的bonus也很容易实现，</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">EXPLAIN (o) SELECT * FROM (SELECT v1, ARRAY [1.0, 1.0, 1.0] &lt;-&gt; v1 as distance FROM t1) ORDER BY distance LIMIT 2;</span><br><span class="line"></span><br><span class="line">TopN &#123; n=2, order_bys=[(&quot;Default&quot;, &quot;#0.1&quot;)]&#125;</span><br><span class="line">  Projection &#123; exprs=[&quot;#0.0&quot;, &quot;l2_dist([1.000000,1.000000,1.000000], #0.0)&quot;] &#125;</span><br><span class="line">    SeqScan &#123; table=t1 &#125;</span><br></pre></td></tr></table></figure>
+
+<p>目前无法得到优化。因为我目前只在TopN中找满足条件的Vector Expression，但这个sql语句中<strong>vector expression 放在了Projection中</strong>，所以只需要在上面代码 <strong>projection layer</strong> 加入寻找vector expression的功能即可。</p>
+<p>再拆出一层封装函数：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">static</span> <span class="keyword">auto</span> <span class="title">ExtractVectorScanFromOrderBy</span><span class="params">(<span class="type">const</span> std::pair&lt;OrderByType, AbstractExpressionRef&gt; &amp;order_by, </span></span></span><br><span class="line"><span class="params"><span class="function">                                        VectorExpressionType &amp;vector_expr_type,</span></span></span><br><span class="line"><span class="params"><span class="function">                                        std::shared_ptr&lt;<span class="type">const</span> ArrayExpression&gt; &amp;base_vector, </span></span></span><br><span class="line"><span class="params"><span class="function">                                        <span class="type">uint32_t</span> &amp;col_idx)</span> -&gt; <span class="type">bool</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (order_by.first != OrderByType::DEFAULT &amp;&amp; order_by.first != OrderByType::ASC) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;  <span class="comment">// vector index scan does not support descending order.</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> <span class="built_in">ExtractVectorScanFromAbsExpr</span>(order_by.second, vector_expr_type, base_vector, col_idx);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">static</span> <span class="keyword">auto</span> <span class="title">ExtractVectorScanFromAbsExpr</span><span class="params">(<span class="type">const</span> AbstractExpressionRef &amp;expr, VectorExpressionType &amp;vector_expr_type,</span></span></span><br><span class="line"><span class="params"><span class="function">                                         std::shared_ptr&lt;<span class="type">const</span> ArrayExpression&gt; &amp;base_vector, </span></span></span><br><span class="line"><span class="params"><span class="function">                                         <span class="type">uint32_t</span> &amp;col_idx)</span> -&gt; <span class="type">bool</span> </span>&#123;</span><br><span class="line">  <span class="type">const</span> <span class="keyword">auto</span> vector_expr = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> VectorExpression *&gt;(expr.<span class="built_in">get</span>());</span><br><span class="line">  <span class="keyword">if</span> (vector_expr == <span class="literal">nullptr</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  vector_expr_type = vector_expr-&gt;expr_type_;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">auto</span> left = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> ArrayExpression *&gt;(vector_expr-&gt;<span class="built_in">GetChildAt</span>(<span class="number">0</span>).<span class="built_in">get</span>());</span><br><span class="line">  <span class="keyword">auto</span> left_col_expr = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> ColumnValueExpression *&gt;(vector_expr-&gt;<span class="built_in">GetChildAt</span>(<span class="number">0</span>).<span class="built_in">get</span>());</span><br><span class="line">  <span class="keyword">auto</span> right = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> ArrayExpression *&gt;(vector_expr-&gt;<span class="built_in">GetChildAt</span>(<span class="number">1</span>).<span class="built_in">get</span>());</span><br><span class="line">  <span class="keyword">auto</span> right_col_expr = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> ColumnValueExpression *&gt;(vector_expr-&gt;<span class="built_in">GetChildAt</span>(<span class="number">1</span>).<span class="built_in">get</span>());</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (left != <span class="literal">nullptr</span> &amp;&amp; right_col_expr != <span class="literal">nullptr</span>) &#123;</span><br><span class="line">    base_vector = std::<span class="built_in">dynamic_pointer_cast</span>&lt;<span class="type">const</span> ArrayExpression&gt;(</span><br><span class="line">      std::<span class="built_in">shared_ptr</span>&lt;AbstractExpression&gt;(left-&gt;<span class="built_in">CloneWithChildren</span>(left-&gt;<span class="built_in">GetChildren</span>()))</span><br><span class="line">    );</span><br><span class="line">    col_idx = right_col_expr-&gt;<span class="built_in">GetColIdx</span>();</span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (right != <span class="literal">nullptr</span> &amp;&amp; left_col_expr != <span class="literal">nullptr</span>) &#123;</span><br><span class="line">    base_vector = std::<span class="built_in">dynamic_pointer_cast</span>&lt;<span class="type">const</span> ArrayExpression&gt;(</span><br><span class="line">      std::<span class="built_in">shared_ptr</span>&lt;AbstractExpression&gt;(right-&gt;<span class="built_in">CloneWithChildren</span>(right-&gt;<span class="built_in">GetChildren</span>()))</span><br><span class="line">    );</span><br><span class="line">    col_idx = left_col_expr-&gt;<span class="built_in">GetColIdx</span>();</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>增加并修改Projection Layer代码：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">... ...</span><br><span class="line">  <span class="comment">// Projection layer.</span></span><br><span class="line">  <span class="keyword">if</span> (cur_plan-&gt;<span class="built_in">GetType</span>() == PlanType::Projection) &#123;</span><br><span class="line">    projection_node = cur_plan;</span><br><span class="line">    <span class="keyword">auto</span> projection_plan = <span class="built_in">dynamic_cast</span>&lt;<span class="type">const</span> ProjectionPlanNode *&gt;(cur_plan.<span class="built_in">get</span>());</span><br><span class="line">    cur_plan = projection_plan-&gt;<span class="built_in">GetChildPlan</span>();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">auto</span> proj_exprs = projection_plan-&gt;<span class="built_in">GetExpressions</span>();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (col_idx == <span class="number">-1U</span>) &#123;</span><br><span class="line">      <span class="comment">// Did not find vector expression in TopN, search it in projection.</span></span><br><span class="line">      <span class="keyword">for</span> (<span class="type">const</span> <span class="keyword">auto</span> &amp;expr : proj_exprs) &#123;</span><br><span class="line">        <span class="keyword">auto</span> ve = <span class="built_in">dynamic_cast</span>&lt;VectorExpression *&gt;(expr.<span class="built_in">get</span>());</span><br><span class="line">        <span class="keyword">if</span> (ve != <span class="literal">nullptr</span> &amp;&amp; !<span class="built_in">ExtractVectorScanFromAbsExpr</span>(expr, vector_expr_type, base_vector, col_idx)) &#123;</span><br><span class="line">          <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="comment">// Re-map col_idx.</span></span><br><span class="line">      <span class="built_in">BUSTUB_ASSERT</span>(col_idx &lt; projection_plan-&gt;<span class="built_in">GetExpressions</span>().<span class="built_in">size</span>(), <span class="string">&quot;col_idx greater than projection.&quot;</span>);</span><br><span class="line">      <span class="keyword">auto</span> col_proj_expr = proj_exprs[col_idx];</span><br><span class="line">      <span class="keyword">auto</span> col_column_value_expr = <span class="built_in">dynamic_cast</span>&lt;ColumnValueExpression *&gt;(col_proj_expr.<span class="built_in">get</span>());</span><br><span class="line">      <span class="keyword">if</span> (col_column_value_expr == <span class="literal">nullptr</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> optimized_plan;  <span class="comment">// Not direct projecting expression, do not support optimizing.</span></span><br><span class="line">      &#125;</span><br><span class="line">      col_idx = col_column_value_expr-&gt;<span class="built_in">GetColIdx</span>();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (col_idx == <span class="number">-1U</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> optimized_plan;  <span class="comment">// Did not find vector expr in both TopN and Projection.</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">... ...</span><br></pre></td></tr></table></figure>
+
+<p>在测试文件最下面增加语句：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">statement ok</span><br><span class="line"><span class="keyword">set</span> vector_index_method<span class="operator">=</span>unset</span><br><span class="line"></span><br><span class="line">statement ok</span><br><span class="line">EXPLAIN (o) <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> v1, <span class="keyword">ARRAY</span> [<span class="number">1.0</span>, <span class="number">1.0</span>, <span class="number">1.0</span>] <span class="operator">&lt;</span><span class="operator">-</span><span class="operator">&gt;</span> v1 <span class="keyword">as</span> distance <span class="keyword">FROM</span> t1) <span class="keyword">ORDER</span> <span class="keyword">BY</span> distance LIMIT <span class="number">2</span>;</span><br></pre></td></tr></table></figure>
+
+<p>运行可看到，成功优化Bonus：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;main&gt;:43</span><br><span class="line">EXPLAIN (o) SELECT * FROM (SELECT v1, ARRAY [1.0, 1.0, 1.0] &lt;-&gt; v1 as distance FROM t1) ORDER BY distance LIMIT 2;</span><br><span class="line">----</span><br><span class="line">=== OPTIMIZER ===</span><br><span class="line">Projection &#123; exprs=[&quot;#0.0&quot;, &quot;l2_dist([1.000000,1.000000,1.000000], #0.0)&quot;] &#125;</span><br><span class="line">  VectorIndexScan &#123; index_oid=1, index_name=t1v1hnsw, table_oid=24, table_name=t1 base_vector=[1.000000,1.000000,1.000000], limit=2 &#125;</span><br></pre></td></tr></table></figure>
+
+<p>目前就实现了在优化器中将<strong>seq_scan优化成VectorIndexScan</strong>，后续就可实现向量索引的具体算法了。经过前面Project 3 Leaderboard部分的锤炼，这部分实现新的优化器规则还是毫无压力的，但给的测试也实在不全面，我目前也没检查edge cases，遇到问题再改吧，但更改后不一定会贴出来了。</p>
+<h1 id="Inverted-File-Flat-Index"><a href="#Inverted-File-Flat-Index" class="headerlink" title="Inverted File Flat Index"></a>Inverted File Flat Index</h1><p>现在实现了优化器中将 PlanTreeNode 优化成利用向量索引扫描的 VectorIndexScan，从这里开始，我们就要开始实现向量索引的具体算法，实现对向量距离操作的加速优化。</p>
+<p>这一部分，是实现<strong>Inverted File Flat Index</strong>。</p>
+<h2 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h2><p><strong>IVFFlat</strong> 的基本思路是：先使用聚类（如 K-means）将数据点划分为多个cluster，每个cluster由其“质心”代表。这样，向量空间被划分成多个以cluster质心为界的格子。插入新数据时，只需将它归入其所在格子的簇中。查询时，只在距离查询向量<strong>最近的几个cluster中</strong>进行精确搜索，跳过大量无关向量，从而在牺牲部分精度的同时，大幅提高搜索效率。</p>
+<p>这也是一种<strong>轻量级</strong>的向量索引，构建快，占用内存少，但是查找精度不足。</p>
+<p><img src="https://i-blog.csdnimg.cn/direct/00dc2bf2c8d5438fa17cf61a0b5b70cc.png" alt="构建"><br>格子边界就是<strong>两个相邻“质心”连线的垂直平分线</strong>，即保证边界线上的点到左右两个格子质心距离都相等，有点像固体物理的晶格。 并且因为开销过大，每个格子的质心是不会随着数据插入而动态调整的，只会在构建时就确定。这也是该算法的缺点之一。同时因为查找最近邻几个cluster，所以查找精确度非常依赖数据的聚簇性。<br><img src="https://i-blog.csdnimg.cn/direct/763e41b6d9f0458b84b35a18ae2b1b02.png" alt="查找"></p>
+<h2 id="具体流程"><a href="#具体流程" class="headerlink" title="具体流程"></a>具体流程</h2><h3 id="聚类（训练阶段）"><a href="#聚类（训练阶段）" class="headerlink" title="聚类（训练阶段）"></a>聚类（训练阶段）</h3><p>用 K-Means 将所有向量划分为 nlist 个簇。</p>
+<h4 id="K-Means-算法目标和数学表达"><a href="#K-Means-算法目标和数学表达" class="headerlink" title="K-Means 算法目标和数学表达"></a>K-Means 算法目标和数学表达</h4><p>K-Means 是一种无监督聚类算法，目标是将数据划分为 k 个簇（cluster），使得：<strong>每个簇内的样本尽量相似，簇与簇之间尽量不同。</strong> 它通过最小化<strong>簇内平方误差（Within-Cluster Sum of Squares, WCSS）</strong> 来优化聚类效果。</p>
+<p>给定数据集：</p>
+<p>$$<br>X &#x3D; {x_1, x_2, \dots, x_n},\quad x_i \in \mathbb{R}^d<br>$$</p>
+<p>我们要找到 $k$ 个质心（centroids）：</p>
+<p>$$<br>C &#x3D; {c_1, c_2, \dots, c_k}<br>$$</p>
+<p>目标是最小化以下损失函数（<strong>簇内平方和误差，Within-Cluster Sum of Squares, WCSS</strong>）：</p>
+<p>$$<br>J &#x3D; \sum_{i&#x3D;1}^{n} \min_{j&#x3D;1}^k |x_i - c_j|^2<br>$$</p>
+<p>表达还是很清晰的，上述最小化损失函数翻译成人话就是：<strong>通过调整质心，使计算每个数据点到各自最近的质心的距离，再把这些距离加起来，让这个加起来距离和最小，这样质心的选择就是最精确的。</strong> （不过因为开方运算计算量太大，而且开不开方没意义，所以这个“<strong>距离</strong>“其实是<strong>距离的平方</strong>，节省一个开方的计算量）</p>
+<h4 id="K-Means-算法流程"><a href="#K-Means-算法流程" class="headerlink" title="K-Means 算法流程"></a>K-Means 算法流程</h4><p><strong>Step1 初始化中心点</strong>：<br> 从数据集中随机选择k个点最为<strong>cluster初始质心点。</strong></p>
+<p><strong>Step 2: 迭代直到收敛</strong>：</p>
+<p><strong>（1） 分配</strong><br>将各个点$x_i$分配到各自最近的质心：<br>$$<br>a_{i} &#x3D; \arg \min_{j} |x_i - c_j|^2<br>$$</p>
+<p><strong>(2) 更新</strong></p>
+<p>重新计算分配数据点之后的每个中心点为其簇中所有点的均值：<br>$$<br>c_j &#x3D; \frac{1}{|C_j|} \sum_{x_i \in C_j} x_j<br>$$</p>
+<p><strong>(3) 收敛条件</strong></p>
+<p>不断重复(1)(2)，直到</p>
+<ul>
+<li>中心不再变化（误差变化小于阈值）</li>
+<li>迭代次数达到上限</li>
+</ul>
+<h4 id="K-Means"><a href="#K-Means" class="headerlink" title="K-Means++"></a>K-Means++</h4><p>以上传统k-means算法的瓶颈则是在随机初始化中心点，很容易使最开始的中心点过于集中，从而浪费大量迭代次数于分散中心点。</p>
+<p>于是<strong>k-means++</strong> 用了一种更好的初始化中心点方式。</p>
+<p>流程：<br>    1.	随机选择第一个中心 $c_1$<br>    <em>（现在要选择第二个中心）</em><br>    2.	对于每个点 x，计算其到最近中心的距离 $D(x)^2 &#x3D; \min_{c} |x - c|^2$<br>    3. 把每一个点的$D(x)^2$ 为看作权重，构造一个概率分布：<br>    $$<br>    P(x_i) &#x3D; \frac{D(x_i)^2}{\sum_{x_j} D(x_j)^2}<br>    $$<br>    4. 从所有点中，按这个概率分布随机选出下一个中心。即，<strong>越远越可能被选中</strong>。<br>    <em>（已经选择完了第二个中心）</em><br>    5.	重复直到选出 k 个中心</p>
+<p>→ 这样做可以防止所有中心点聚在一起，虽然仍然是随机，<strong>但大幅提高较远点被选为中心的概率</strong>，提高聚类稳定性和收敛速度。</p>
+<p>举个简单例子：</p>
+<p>假设我们有 4 个点：</p>
+<ul>
+<li>点 A 距当前中心距离为 1</li>
+<li>点 B 距离为 2</li>
+<li>点 C 距离为 3</li>
+<li>点 D 距离为 4</li>
+</ul>
+<p>我们计算每个点的 $D(x)^2$：</p>
+<table>
+<thead>
+<tr>
+<th>点</th>
+<th>距离 D(x)</th>
+<th>距离平方 D(x)^2</th>
+<th>选中概率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A</td>
+<td>1</td>
+<td>1</td>
+<td>1 &#x2F; 30</td>
+</tr>
+<tr>
+<td>B</td>
+<td>2</td>
+<td>4</td>
+<td>4 &#x2F; 30</td>
+</tr>
+<tr>
+<td>C</td>
+<td>3</td>
+<td>9</td>
+<td>9 &#x2F; 30</td>
+</tr>
+<tr>
+<td>D</td>
+<td>4</td>
+<td>16</td>
+<td>16 &#x2F; 30</td>
+</tr>
+</tbody></table>
+<p>→ 最有可能被选为新中心的是 D，其次是 C。</p>
+<h3 id="构建倒排表（索引阶段）"><a href="#构建倒排表（索引阶段）" class="headerlink" title="构建倒排表（索引阶段）"></a>构建倒排表（索引阶段）</h3><p>已经构建出了k个cluster中心点，现在遍历所有数据点向量，找到其最近的中心点，加入中心点对应的cluster <strong>倒排表</strong>中：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> each vector x:</span><br><span class="line">    c = <span class="built_in">find_nearest_centroid</span>(x, centroids)</span><br><span class="line">    inverted_lists[c].<span class="built_in">append</span>(&#123;id: x.id, vector: x&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>每个倒排表就是一个 cluster 中的“原始向量表”。</p>
+<h3 id="查询流程（ANN-搜索）"><a href="#查询流程（ANN-搜索）" class="headerlink" title="查询流程（ANN 搜索）"></a>查询流程（ANN 搜索）</h3><p>搜索流程包括两个阶段：</p>
+<p><strong>1. 选出 nprobe 个最近中心点（coarse search）</strong></p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nearest_centroids = <span class="built_in">top_k_by_distance</span>(query, centroids, k=nprobe)</span><br></pre></td></tr></table></figure>
+
+<p>这一步成本是 $\mathcal{O}(nlist \times (dim + \log nprobe))$ ，即遍历每个中心点并计算距离。一般nprobe很小，所以成本可近似 $\mathcal{O}(nlist × dim)$ 。但由于 nlist 通常较小（如 100~1000），速度较快。</p>
+<p><strong>2. 在选中的倒排表中精排（fine search）</strong></p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">candidates = []</span><br><span class="line"><span class="keyword">for</span> c in nearest_centroids:</span><br><span class="line">    <span class="keyword">for</span> entry in inverted_lists[c]:</span><br><span class="line">        dist = <span class="built_in">distance</span>(query, entry.vector)</span><br><span class="line">        candidates.<span class="built_in">append</span>((entry.id, dist))</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="built_in">top_k</span>(candidates)</span><br></pre></td></tr></table></figure>
+<p>成本为：$\mathcal{O}(nprobe \times \text{avg_list_size} \times \text{dim})$。</p>
+<p>只需要在选出的少量近邻倒排表中做全量比对，即<strong>nprobe</strong>、<strong>avg_list_size</strong>都很小，故总成本远小于 brute-force。</p>
+<h3 id="常见参数"><a href="#常见参数" class="headerlink" title="常见参数"></a>常见参数</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>意义</th>
+<th>通常设置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>nlist</td>
+<td>聚类中心数量</td>
+<td>100~1000（构建时）</td>
+</tr>
+<tr>
+<td>nprobe</td>
+<td>查询时探测的中心数量</td>
+<td>1~32（运行时可调）</td>
+</tr>
+<tr>
+<td>dim</td>
+<td>向量维度</td>
+<td>任意</td>
+</tr>
+<tr>
+<td>topk</td>
+<td>查询返回的最近邻数量</td>
+<td>任意</td>
+</tr>
+</tbody></table>
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>前面讲过的三种操作对应的<strong>API</strong>为：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief Build centroids and clusters.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">BuildIndex</span><span class="params">(std::vector&lt;std::pair&lt;std::vector&lt;<span class="type">double</span>&gt;, RID&gt;&gt; initial_data)</span> <span class="keyword">override</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief The nearest &quot;limit&quot; number of vectors.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">ScanVectorKey</span><span class="params">(<span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;base_vector, <span class="type">size_t</span> limit)</span> -&gt; std::vector&lt;RID&gt; <span class="keyword">override</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief Insert a new vector.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">InsertVectorEntry</span><span class="params">(<span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;key, RID rid)</span> <span class="keyword">override</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>而Vector Index不支持传统 Index的API</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">InsertEntry</span><span class="params">(<span class="type">const</span> Tuple &amp;key, RID rid, Transaction *transaction)</span> -&gt; <span class="type">bool</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">  <span class="built_in">UNIMPLEMENTED</span>(<span class="string">&quot;call InsertVectorEntry instead&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">DeleteEntry</span><span class="params">(<span class="type">const</span> Tuple &amp;key, RID rid, Transaction *transaction)</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">  <span class="built_in">UNIMPLEMENTED</span>(<span class="string">&quot;delete from vector index is not supported&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">ScanKey</span><span class="params">(<span class="type">const</span> Tuple &amp;key, std::vector&lt;RID&gt; *result, Transaction *transaction)</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">  <span class="built_in">UNIMPLEMENTED</span>(<span class="string">&quot;call ScanVectorKey instead&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>所以要修改 <strong>Insertion Executor</strong>，改使用向量索引对应的API。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">... ...</span><br><span class="line">      <span class="keyword">auto</span> &amp;idx_info = indexes[i];</span><br><span class="line">      <span class="keyword">auto</span> key_attri = idx_info-&gt;index_-&gt;<span class="built_in">GetKeyAttrs</span>();</span><br><span class="line"></span><br><span class="line">      <span class="keyword">if</span> (key_attri.<span class="built_in">size</span>() == <span class="number">1</span> &amp;&amp; schema-&gt;<span class="built_in">GetColumn</span>(key_attri[<span class="number">0</span>]).<span class="built_in">GetType</span>() == VECTOR) &#123;</span><br><span class="line">        <span class="comment">// Vector type, use VectorIndex API.</span></span><br><span class="line">        <span class="keyword">auto</span> vi = <span class="built_in">dynamic_cast</span>&lt;VectorIndex *&gt;(idx_info-&gt;index_.<span class="built_in">get</span>());</span><br><span class="line">        <span class="built_in">BUSTUB_ASSERT</span>(vi != <span class="literal">nullptr</span>, <span class="string">&quot;Vector Key must have Vector Index.&quot;</span>);</span><br><span class="line">        <span class="keyword">auto</span> v = new_tuple.<span class="built_in">GetValue</span>(schema, key_attri[<span class="number">0</span>]);</span><br><span class="line">        vi-&gt;<span class="built_in">InsertVectorEntry</span>(v.<span class="built_in">GetVector</span>(), *rid);</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// Normal index.</span></span><br><span class="line">        <span class="keyword">auto</span> key = new_tuple.<span class="built_in">KeyFromTuple</span>(*schema, idx_info-&gt;key_schema_, </span><br><span class="line">          idx_info-&gt;index_-&gt;<span class="built_in">GetKeyAttrs</span>());</span><br><span class="line">        idx_info-&gt;index_-&gt;<span class="built_in">InsertEntry</span>(key, *rid, txn);</span><br><span class="line">      &#125;</span><br><span class="line">... ...</span><br></pre></td></tr></table></figure>
+
+
+<p>构建阶段有个小细节是，在迭代计算时，要处理当前<strong>centroid_bucket</strong> 为空的情况，我是直接不改变centroid。</p>
+<p>先实现<strong>查找向量最近centroid</strong> 和 <strong>自动更新 centroids</strong> 的两个帮助函数：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief Find the nearest centroid to the base vector in all centroids.</span></span><br><span class="line"><span class="comment"> * @return the nearest cnetroids index.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">FindCentroid</span><span class="params">(<span class="type">const</span> Vector &amp;vec, <span class="type">const</span> std::vector&lt;Vector&gt; &amp;centroids, VectorExpressionType dist_fn)</span> -&gt; <span class="type">size_t</span> </span>&#123;</span><br><span class="line">  <span class="built_in">BUSTUB_ASSERT</span>(centroids.<span class="built_in">empty</span>() == <span class="literal">false</span>, <span class="string">&quot;centroids cannot be empty.&quot;</span>);</span><br><span class="line"></span><br><span class="line">  <span class="type">size_t</span> nearest = <span class="number">-1U</span>;</span><br><span class="line">  <span class="type">double</span> distance = std::numeric_limits&lt;<span class="type">double</span>&gt;::<span class="built_in">max</span>();</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; centroids.<span class="built_in">size</span>(); ++i) &#123;</span><br><span class="line">    <span class="keyword">auto</span> d = <span class="built_in">ComputeDistance</span>(vec, centroids[i], dist_fn);</span><br><span class="line">    <span class="keyword">if</span> (d &lt; distance) &#123;</span><br><span class="line">      distance = d;</span><br><span class="line">      nearest = i;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> nearest;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief Compute new centroids based on the original centroids.</span></span><br><span class="line"><span class="comment"> * Assign data to centroids, and re-compute new centroids.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">FindCentroids</span><span class="params">(<span class="type">const</span> std::vector&lt;std::pair&lt;Vector, RID&gt;&gt; &amp;data, <span class="type">const</span> std::vector&lt;Vector&gt; &amp;centroids,</span></span></span><br><span class="line"><span class="params"><span class="function">                   VectorExpressionType dist_fn)</span> -&gt; std::vector&lt;Vector&gt; </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (data.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">    <span class="keyword">return</span> &#123;&#125;;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  std::vector&lt;std::vector&lt;Vector&gt;&gt; <span class="built_in">centroids_buckets</span>(centroids.<span class="built_in">size</span>());</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;p : data) &#123;</span><br><span class="line">    centroids_buckets[<span class="built_in">FindCentroid</span>(p.first, centroids, dist_fn)].<span class="built_in">push_back</span>(p.first);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function">std::vector&lt;Vector&gt; <span class="title">new_centroids</span><span class="params">(centroids.size())</span></span>;</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; centroids_buckets.<span class="built_in">size</span>(); ++i) &#123;</span><br><span class="line">    <span class="keyword">auto</span> new_centroid = <span class="built_in">VectorAvg</span>(centroids_buckets[i]);</span><br><span class="line">    new_centroids[i] = new_centroid.<span class="built_in">empty</span>() ? centroids[i] : new_centroid;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">return</span> new_centroids;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>然后就可以实现 <strong>BuildIndex</strong>:</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">IVFFlatIndex::BuildIndex</span><span class="params">(std::vector&lt;std::pair&lt;Vector, RID&gt;&gt; initial_data)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (initial_data.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Step 1: randomly initialize centroids.</span></span><br><span class="line">  centroids_ = <span class="built_in">RandomSample</span>(initial_data, lists_);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Step 2: assign and iterate. </span></span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; build_iteration_; ++i) &#123;</span><br><span class="line">    <span class="keyword">auto</span> new_centroids = <span class="built_in">FindCentroids</span>(initial_data, centroids_, distance_fn_);</span><br><span class="line">    </span><br><span class="line">    <span class="type">double</span> delta = <span class="number">0.0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> j = <span class="number">0</span>; j &lt; centroids_.<span class="built_in">size</span>(); ++j) &#123;</span><br><span class="line">      delta += <span class="built_in">ComputeDistance</span>(centroids_[j], new_centroids[j], distance_fn_);</span><br><span class="line">    &#125;</span><br><span class="line">  </span><br><span class="line">    centroids_ = std::<span class="built_in">move</span>(new_centroids);</span><br><span class="line">    <span class="keyword">if</span> (delta &lt; <span class="number">1e-5</span>) &#123;</span><br><span class="line">      <span class="keyword">break</span>;  <span class="comment">// convergence.</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">// Step 3: put data to centroids_buckets_.</span></span><br><span class="line">  centroids_buckets_.<span class="built_in">resize</span>(centroids_.<span class="built_in">size</span>());</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;p : initial_data) &#123;</span><br><span class="line">    centroids_buckets_[<span class="built_in">FindCentroid</span>(p.first, centroids_, distance_fn_)].<span class="built_in">push_back</span>(p);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// Shrink to save memory.</span></span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;bucket : centroids_buckets_) &#123;</span><br><span class="line">    bucket.<span class="built_in">shrink_to_fit</span>();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>插入新向量很简单，注意这个算法插入新向量后不需要更新centroids。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">IVFFlatIndex::InsertVectorEntry</span><span class="params">(<span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;key, RID rid)</span> </span>&#123;</span><br><span class="line">  <span class="built_in">BUSTUB_ASSERT</span>(key.<span class="built_in">size</span>() == centroids_.<span class="built_in">front</span>().<span class="built_in">size</span>(), <span class="string">&quot;Inserted vector has wrong dimension.&quot;</span>);</span><br><span class="line">  centroids_buckets_[<span class="built_in">FindCentroid</span>(key, centroids_, distance_fn_)].<span class="built_in">emplace_back</span>(key, rid);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来是查找，为了查找方便，加入一个新的帮手函数来找到<strong>最近的N个centroids</strong>:</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief Find the nearest N centroids.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">FindNCentroids</span><span class="params">(<span class="type">const</span> Vector &amp;vec, <span class="type">const</span> std::vector&lt;Vector&gt; &amp;centroids, VectorExpressionType dist_fn, </span></span></span><br><span class="line"><span class="params"><span class="function">                    <span class="type">size_t</span> nprobe)</span> -&gt; std::vector&lt;<span class="type">size_t</span>&gt; </span>&#123;</span><br><span class="line">  <span class="built_in">BUSTUB_ASSERT</span>(nprobe &lt;= centroids.<span class="built_in">size</span>(), <span class="string">&quot;Requested centroid count exceeds available centroids.&quot;</span>);</span><br><span class="line"></span><br><span class="line">  std::vector&lt;std::pair&lt;<span class="type">double</span>, <span class="type">size_t</span>&gt;&gt; distances;</span><br><span class="line">  distances.<span class="built_in">reserve</span>(centroids.<span class="built_in">size</span>());</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; centroids.<span class="built_in">size</span>(); ++i) &#123;</span><br><span class="line">    distances.<span class="built_in">emplace_back</span>(<span class="built_in">ComputeDistance</span>(vec, centroids[i], dist_fn), i);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  std::<span class="built_in">partial_sort</span>(distances.<span class="built_in">begin</span>(), distances.<span class="built_in">begin</span>() + nprobe, distances.<span class="built_in">end</span>());</span><br><span class="line"></span><br><span class="line">  <span class="function">std::vector&lt;<span class="type">size_t</span>&gt; <span class="title">nearest_n</span><span class="params">(nprobe)</span></span>;</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; nprobe; i++) &#123;</span><br><span class="line">    nearest_n[i] = distances[i].second;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> nearest_n;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>继续实现查找：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">IVFFlatIndex::ScanVectorKey</span><span class="params">(<span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;base_vector, <span class="type">size_t</span> limit)</span> -&gt; std::vector&lt;RID&gt; </span>&#123;</span><br><span class="line">  <span class="keyword">auto</span> nearest_centroids = <span class="built_in">FindNCentroids</span>(base_vector, centroids_, </span><br><span class="line">    distance_fn_, probe_lists_);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// Compute all distances in probe_list.</span></span><br><span class="line">    std::vector&lt;std::pair&lt;<span class="type">double</span>, RID&gt;&gt; candidates;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> c : nearest_centroids) &#123;</span><br><span class="line">      <span class="keyword">for</span> (<span class="type">const</span> <span class="keyword">auto</span> &amp;[v, rid] : centroids_buckets_[c]) &#123;</span><br><span class="line">        candidates.<span class="built_in">emplace_back</span>(<span class="built_in">ComputeDistance</span>(base_vector, v, distance_fn_), rid);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="type">size_t</span> ans_num = std::<span class="built_in">min</span>(limit, candidates.<span class="built_in">size</span>());</span><br><span class="line">    std::<span class="built_in">partial_sort</span>(candidates.<span class="built_in">begin</span>(), candidates.<span class="built_in">begin</span>() + ans_num, </span><br><span class="line">    candidates.<span class="built_in">end</span>(), [](<span class="type">const</span> <span class="keyword">auto</span> &amp;a, <span class="type">const</span> <span class="keyword">auto</span> &amp;b) &#123; <span class="keyword">return</span> a.first &lt; b.first;&#125;);</span><br><span class="line"></span><br><span class="line">    <span class="function">std::vector&lt;RID&gt; <span class="title">ans</span><span class="params">(ans_num)</span></span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; ans_num; ++i) &#123;</span><br><span class="line">      ans[i] = candidates[i].second;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> ans;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即可运行通过测试：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">make -j8 sqllogictest</span><br><span class="line">./bin/bustub-sqllogictest ../test/sql/vector.04-ivfflat.slt --verbose</span><br></pre></td></tr></table></figure>
+
+<p>正如之前讲的，因为IFFLAT算法只查找近邻几个cluster，<strong>为了效率牺牲了一些准确性</strong>，所以这里的测试又可能多次运行结果不一致，只要保证多组结果中有和标准答案里相同的情况，就应该是正确的实现了。</p>
+<p>如果想更准确，可以增加构建的迭代次数，比如我从500增加到3000。但仍然会观察到结果不稳定，测试中的最后一个sql还是会偶尔出现错误的结果。虽然合理，但很难受。</p>
+<p>接下来我改成K-means++初始化方法，把RandomSample改个名，改个实现即可：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief Use K-Mean++, to randomly select &quot;k&quot; elements from input.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">RandomInitialCentroids</span><span class="params">(std::vector&lt;std::pair&lt;Vector, RID&gt;&gt; &amp;input, <span class="type">size_t</span> k, VectorExpressionType dist_fn)</span> </span></span><br><span class="line"><span class="function">    -&gt; std::vector&lt;Vector&gt; </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (k &gt; input.<span class="built_in">size</span>()) &#123;</span><br><span class="line">    <span class="keyword">throw</span> std::<span class="built_in">invalid_argument</span>(<span class="string">&quot;Sample size exceeds input size.&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  std::unordered_map&lt;<span class="type">size_t</span>, Vector&gt; inputs;</span><br><span class="line">  <span class="type">size_t</span> n = input.<span class="built_in">size</span>();</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; input.<span class="built_in">size</span>(); ++i) &#123;</span><br><span class="line">    inputs[i] = input[i].first;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Selecting centroids.</span></span><br><span class="line">  std::vector&lt;Vector&gt; centroids;</span><br><span class="line">  <span class="type">size_t</span> first = <span class="built_in">rand</span>() % n;</span><br><span class="line">  centroids.<span class="built_in">push_back</span>(inputs[first]);</span><br><span class="line">  inputs.<span class="built_in">erase</span>(first);</span><br><span class="line">  k -= <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">  std::random_device rd;</span><br><span class="line">  <span class="function">std::mt19937 <span class="title">gen</span><span class="params">(rd())</span></span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">while</span> (centroids.<span class="built_in">size</span>() &lt; k) &#123;</span><br><span class="line">    <span class="comment">// Collect weights.</span></span><br><span class="line">    std::vector&lt;<span class="type">double</span>&gt; weights;</span><br><span class="line">    std::vector&lt;<span class="type">double</span>&gt; vectors;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">auto</span> &amp;[idx, vec] : inputs) &#123;</span><br><span class="line">      <span class="type">double</span> min_dist = std::numeric_limits&lt;<span class="type">double</span>&gt;::<span class="built_in">max</span>();</span><br><span class="line">      <span class="keyword">for</span> (<span class="type">const</span> <span class="keyword">auto</span> &amp;centroid : centroids) &#123;</span><br><span class="line">        <span class="type">double</span> d = <span class="built_in">ComputeDistance</span>(vec, centroid, dist_fn);</span><br><span class="line">        min_dist = std::<span class="built_in">min</span>(min_dist, d);</span><br><span class="line">      &#125;</span><br><span class="line">      weights.<span class="built_in">push_back</span>(min_dist * min_dist);</span><br><span class="line">      vectors.<span class="built_in">push_back</span>(idx);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// Random select the next centroid.</span></span><br><span class="line">    std::discrete_distribution&lt;&gt; <span class="built_in">dist</span>(weights.<span class="built_in">begin</span>(), weights.<span class="built_in">end</span>());</span><br><span class="line">    <span class="type">size_t</span> next = vectors[<span class="built_in">dist</span>(gen)];</span><br><span class="line">    centroids.<span class="built_in">push_back</span>(inputs[next]);</span><br><span class="line">    inputs.<span class="built_in">erase</span>(next);</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">return</span> centroids;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这时候再去运行测试，会发现多次尝试都可获得正确结果，不再会得到错误的测试结果，即使迭代次数只有500。可见，更准确的初始中心方法对结果的提升还是巨大的。</p>
+<h1 id="Hierarchical-Navigable-Small-Worlds"><a href="#Hierarchical-Navigable-Small-Worlds" class="headerlink" title="Hierarchical Navigable Small Worlds"></a>Hierarchical Navigable Small Worlds</h1><p>在实现HNSW之前，先实现一个基本组件 **NSW (Navigable Small Worlds)**。</p>
+<h2 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h2><p>这个算法维护图中节点与近邻之间的连接，查找时从一个节点开始，不断判断其相邻节点是否与目标节点更近，并持续跳向更近的节点，直到找不到更近的节点。</p>
+<p><img src="https://i-blog.csdnimg.cn/direct/b65d3996e48e45359316ace780e4bdf0.png" alt="请添加图片描述"><br>如图，查找距离<strong>蓝色节点</strong>最近的节点，先随机从<strong>Entry Point</strong> 开始，计算其相邻节点是否更近，然后跳转到更近的<strong>1st节点</strong>，再同样的方式跳转到<strong>2nd节点</strong>，此时发现四周节点都更远，说明找到最近节点。</p>
+<p>而构建则是类似，先查找最近邻的M个节点，然后插入并将最近邻的M个节点相连。</p>
+<p>这个算法查找速度和内存消耗都大于IFFlat，但提升了<strong>查找精度</strong>以及可以动态构建。当然，这中贪心算法也有很大的缺点，也就是很容易陷于<strong>局部最优</strong>，很依赖图构建的质量和初始点的选取。</p>
+<p>也有解决局部最优的几个思路：</p>
+<ul>
+<li><strong>多起点搜索（multi-entry search）</strong>：从多个随机点开始，多次贪心搜索，取最优。</li>
+<li><strong>beam search &#x2F; best-first search</strong>：维护一个候选集合而非单一节点，跳更稳。</li>
+<li><strong>随机跳跃</strong>：加入一些概率性非贪心跳跃（如 Simulated Annealing 思想）。</li>
+</ul>
+<p>而这里我们也用了<strong>多起点搜索</strong>和<strong>priority-queue</strong>。</p>
+<h2 id="实现-1"><a href="#实现-1" class="headerlink" title="实现"></a>实现</h2><p>我们的实现用了<strong>多起点➕best-first search</strong>。</p>
+<p>需要维护两个数据结构，一个<strong>priority-queue存放候选节点</strong>，记为<strong>C</strong>；一个<strong>binary-heap存放最近的k个结果</strong>，记为<strong>W</strong>。</p>
+<p><img src="https://i-blog.csdnimg.cn/direct/62b70630cd974c0c81d21c50dae6e679.png" alt="请添加图片描述"><br>如上图，初始状态，将两个入口节点放入候选队列<strong>C</strong>和结果集合<strong>W</strong>。<img src="https://i-blog.csdnimg.cn/direct/851bddd36a174775a733386530dc489b.png" alt="请添加图片描述"><br>从候选队列pop出下一个节点，即红色节点，遍历其邻居节点，计算距离，加入候选节点队列<strong>C</strong>和结果集合<strong>W</strong>。而<strong>结果集合只保留最近的k个节点</strong>。</p>
+<p>再继续从候选集合<strong>C</strong>中pop节点，直到<strong>所有候选节点的距离都要远于结构集合里节点的距离</strong>。（注意要避免将已经遍历过的节点重复加入候选合集）</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">NSW::RandomSample</span><span class="params">(<span class="type">size_t</span> ef_construction)</span> -&gt; std::vector&lt;<span class="type">size_t</span>&gt; </span>&#123;</span><br><span class="line">  <span class="keyword">auto</span> vertice = in_vertices_;</span><br><span class="line">  std::random_device rd;</span><br><span class="line">  std::<span class="built_in">shuffle</span>(vertice.<span class="built_in">begin</span>(), vertice.<span class="built_in">end</span>(), rd);</span><br><span class="line"></span><br><span class="line">  <span class="type">size_t</span> sample_size = std::<span class="built_in">min</span>(ef_construction, vertice.<span class="built_in">size</span>());</span><br><span class="line">  <span class="keyword">return</span> &#123;vertice.<span class="built_in">begin</span>(), vertice.<span class="built_in">begin</span>() + sample_size&#125;;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">NSW::Insert</span><span class="params">(<span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;vec, <span class="type">size_t</span> vertex_id, <span class="type">size_t</span> ef_construction, <span class="type">size_t</span> m)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">auto</span> entries = <span class="built_in">RandomSample</span>(ef_construction);</span><br><span class="line">  <span class="keyword">auto</span> nearest = <span class="built_in">SearchLayer</span>(vec, m, entries);</span><br><span class="line"></span><br><span class="line">  <span class="built_in">AddVertex</span>(vertex_id);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> x : nearest) &#123;</span><br><span class="line">    <span class="keyword">auto</span> &amp;lists = edges_[x];</span><br><span class="line">    <span class="keyword">if</span> (lists.<span class="built_in">size</span>() == m_max_) &#123;</span><br><span class="line">      <span class="keyword">auto</span> it = std::<span class="built_in">max_element</span>(</span><br><span class="line">        lists.<span class="built_in">begin</span>(), lists.<span class="built_in">end</span>(),</span><br><span class="line">        [&amp;](<span class="type">size_t</span> a, <span class="type">size_t</span> b) &#123;</span><br><span class="line">          <span class="keyword">return</span> <span class="built_in">ComputeDistance</span>(vertices_[x], vertices_[a], dist_fn_) &lt;</span><br><span class="line">                 <span class="built_in">ComputeDistance</span>(vertices_[x], vertices_[b], dist_fn_);</span><br><span class="line">        &#125;);</span><br><span class="line">      <span class="keyword">auto</span> removed = *it;</span><br><span class="line">      lists.<span class="built_in">erase</span>(it);</span><br><span class="line">      <span class="keyword">auto</span> &amp;rev_list = edges_[removed];</span><br><span class="line">      rev_list.<span class="built_in">erase</span>(std::<span class="built_in">remove</span>(rev_list.<span class="built_in">begin</span>(), rev_list.<span class="built_in">end</span>(), x), rev_list.<span class="built_in">end</span>());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">Connect</span>(vertex_id, x);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>运行测试会发现还是有不稳定的问题，有时候能返回正确结果，有时候返回错误结果。</p>
+<p>解决局部最优最有效实用的方法还是HNSW，也是现在现代向量数据库如pgvector之类最主流的方法。</p>
+<h1 id="Hierarchical-Navigable-Small-World"><a href="#Hierarchical-Navigable-Small-World" class="headerlink" title="Hierarchical Navigable Small World"></a>Hierarchical Navigable Small World</h1><p>这部分则会基于NSW，实现<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1603.09320"><strong>Hierarchical Navigable Small World（层次化可导航小世界图）</strong></a> 的一种<strong>高效向量近似最近邻搜索（ANN）</strong> 算法。</p>
+<p><img src="https://i-blog.csdnimg.cn/direct/45c7eee50e6d4e1f976d1f8d3af212eb.png" alt="请添加图片描述"></p>
+<h2 id="思路-1"><a href="#思路-1" class="headerlink" title="思路"></a>思路</h2><p>这里基于Intuition介绍一下，其通过构建多层次的图结构来加速向量检索，即一堆向量建一个多层的“<strong>跳跃网络</strong>”。核心思路是：</p>
+<ul>
+<li><strong>分层组织</strong>：将向量点随机划分到不同的层级。层数高的节点越<strong>稀疏</strong>节点之间<strong>距离远</strong>，用于快速远距离跳跃；层级低的节点越<strong>密集</strong>节点之间<strong>距离近</strong>，用于具体定位到精确节点。</li>
+<li><strong>近邻连接</strong>：在同一层，节点只连自己附近的点。并有少量的随机远距离连接。</li>
+<li><strong>层次导航</strong>：<ul>
+<li>在上层图中，节点稀疏且连接长距离，可以快速跳跃，找到查询向量的<strong>大致方向</strong>。</li>
+<li>在下层图中，节点密集且连接近邻，可以细致搜索，找到<strong>精确的最近邻</strong>。</li>
+</ul>
+</li>
+</ul>
+<p>整体上，HNSW结合了<strong>局部聚集性</strong>（找到最近邻）和<strong>全局跳跃性</strong>（快速定位）两种特性，使得在海量向量数据中，也能用极少的跳跃快速找到目标。这种设计与<strong>跳表（Skip List）</strong> 非常相似。</p>
+<p>玩过《都市天际线》应该很容易理解，HNSW的结构和城市路网很类似。</p>
+<p>在城市中，建筑往往聚集成簇，比如<strong>住宅区</strong>、<strong>商业区</strong>、<strong>工业区</strong>。每个簇内部建筑密集，但簇与簇之间距离较远，整体呈现出一种<strong>局部密集、整体稀疏</strong>的结构。</p>
+<p>如果使用最naive的“<strong>格子城</strong>”设计——所有道路宽度相同、网格均匀排布——那么远距离通行时，车辆需要经过大量路口，频繁停车等待，通行效率极低。而这就相当于NSW，当搜索初始节点和目标节点相距很远的时候，就要经过大量的“路口”才能找到最近节点，这大大降低了效率。</p>
+<p>为了解决这个问题，城市路网设计引入了道路分级。比如，从居民区到工业区，会设计一条<strong>宽阔的高速路</strong>，通过<strong>尽量少的路口</strong>直达目的地；而到了工业区附近，再通过<strong>高速辅路</strong>下高速，进入工业区内部密集的小街道。这些小街道虽然路口密集、易堵车，但因为它们属于末端道路，不会影响城市高速主干道的整体通行效率。</p>
+<p>HNSW的设计正是如此。<br>高速公路、辅路、密集小路，分别对应HNSW中从上到下的不同层级：</p>
+<ul>
+<li><strong>高层</strong>（高速路）：快速跳跃，减少跳转次数，快速接近目标区域。</li>
+<li><strong>中层</strong>（辅路）：过渡连接，定位更精确的子区域。</li>
+<li><strong>低层</strong>（小街道）：局部密集搜索，最终精准找到最近的节点。</li>
+</ul>
+<p>高级层级负责远距离快速定位，低级层级负责细粒度的精确查找。  这就是HNSW结构与城市路网惊人相似之处。</p>
+<p>现在举个例子，比如数据库里有这些向量：[1] [2] [3] [10] [11] [12] [50] [51] [52]</p>
+<p>如果你查11附近的点，暴力法要每个都算一遍距离，超级慢。</p>
+<p>但HNSW是：</p>
+<ol>
+<li>先在高层，从比如50出发</li>
+<li>发现11比50近，就跳到10</li>
+<li>10周围是11、12，一下子找到最近的邻居！</li>
+</ol>
+<p>跳几步就搞定了！而不是扫一遍。</p>
+<p>（假设2层图）</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">1 ----- 10 ---- 50                   Level 1     远距离连接，通行更快</span><br><span class="line"> \             /</span><br><span class="line">  2----3----11----12----51----52     Level 0     更密集连接，能走得更细</span><br></pre></td></tr></table></figure>
+
+<p>Level 1用于快速粗定位，Level 0用于精细局部搜索，很类似跳表。</p>
+<h2 id="实现-2"><a href="#实现-2" class="headerlink" title="实现"></a>实现</h2><p>HNSW 的每一层相当于一个NSW。</p>
+<h3 id="查找"><a href="#查找" class="headerlink" title="查找"></a>查找</h3><p>查找时从高层开始，向底层查找。<br><img src="https://i-blog.csdnimg.cn/direct/0d83b10ca11d43d1b00ec81ff830f11f.png" alt="请添加图片描述"></p>
+<p>如图，先从 <strong>Layer 2</strong> 开始，找到最近邻节点后，以其为起始点，下到 <strong>Layer 1</strong> 继续查找最近邻点，找到后再进入 <strong>Layer 0</strong> 也就是最底层，查到最近邻的k个点。</p>
+<p>重要的一点是，高层搜索时要用<strong>eof_search</strong> 作为搜索宽度，然后再用<strong>SearchNeighbor()</strong> 找出最近的节点，因为这样才能保持一个较宽的搜索宽度，使搜索更精确。</p>
+<h3 id="插入"><a href="#插入" class="headerlink" title="插入"></a>插入</h3><p>插入节点首先必定要插入底层（类似跳表），因为底层要维护所有节点。并且根据一定的概率来判断是否要插入上层节点，插入层数遵循这样的公式：</p>
+<p>$$<br>\text{level} &#x3D; \left\lfloor -\ln(\text{unif}(0, 1)) \times m_L \right\rfloor<br>$$</p>
+<p>$\text{unif}(0, 1)$ 是一个$[0, 1)$的随机均匀分布。</p>
+<p>外层加一个$-\ln$ 取其对数，其概率密度分布变成了$f(x) &#x3D; e^{-x}$，即<strong>大的数概率小，小的数概率大</strong>。这样就相当于高层建新节点的概率呈指数级下降。</p>
+<p>$m_L$ 是一个可调参数。</p>
+<p>最后再向下取整。</p>
+<h2 id="代码"><a href="#代码" class="headerlink" title="代码"></a>代码</h2><p>查找最近邻：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">SelectNeighbors</span><span class="params">(<span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;vec, <span class="type">const</span> std::vector&lt;<span class="type">size_t</span>&gt; &amp;vertex_ids,</span></span></span><br><span class="line"><span class="params"><span class="function">  <span class="type">const</span> std::vector&lt;std::vector&lt;<span class="type">double</span>&gt;&gt; &amp;vertices, <span class="type">size_t</span> m, VectorExpressionType dist_fn)</span> -&gt; std::vector&lt;<span class="type">size_t</span>&gt; </span>&#123;</span><br><span class="line">  std::vector&lt;std::pair&lt;<span class="type">double</span>, <span class="type">size_t</span>&gt;&gt; distances;</span><br><span class="line">  distances.<span class="built_in">reserve</span>(vertex_ids.<span class="built_in">size</span>());</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (<span class="type">const</span> <span class="keyword">auto</span> vert : vertex_ids) &#123;</span><br><span class="line">    distances.<span class="built_in">emplace_back</span>(<span class="built_in">ComputeDistance</span>(vertices[vert], vec, dist_fn), vert);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  std::<span class="built_in">sort</span>(distances.<span class="built_in">begin</span>(), distances.<span class="built_in">end</span>());</span><br><span class="line">  std::vector&lt;<span class="type">size_t</span>&gt; selected_vs;</span><br><span class="line">  selected_vs.<span class="built_in">reserve</span>(vertex_ids.<span class="built_in">size</span>());</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; m &amp;&amp; i &lt; distances.<span class="built_in">size</span>(); i++) &#123;</span><br><span class="line">    selected_vs.<span class="built_in">emplace_back</span>(distances[i].second);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> selected_vs;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>搜索：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">HNSWIndex::ScanVectorKey</span><span class="params">(<span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;base_vector, <span class="type">size_t</span> limit)</span> -&gt; std::vector&lt;RID&gt; </span>&#123;</span><br><span class="line">  std::vector&lt;<span class="type">size_t</span>&gt; vertex_ids;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Traverse layers.</span></span><br><span class="line">  <span class="keyword">for</span> (<span class="type">int</span> l_idx = layers_.<span class="built_in">size</span>() - <span class="number">1</span>; l_idx &gt;= <span class="number">1</span>; l_idx--) &#123;</span><br><span class="line">    NSW &amp;layer = layers_[l_idx];</span><br><span class="line">    <span class="keyword">if</span> (vertex_ids.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">      vertex_ids = layer.<span class="built_in">SearchLayer</span>(base_vector, ef_search_, layer.<span class="built_in">RandomSample</span>(<span class="number">1</span>, generator_));</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      vertex_ids = layer.<span class="built_in">SearchLayer</span>(base_vector, ef_search_, vertex_ids);</span><br><span class="line">    &#125;</span><br><span class="line">    vertex_ids = <span class="built_in">SelectNeighbors</span>(base_vector, vertex_ids, *vertices_, <span class="number">1</span>, distance_fn_);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Bottom layer.</span></span><br><span class="line">  vertex_ids = layers_[<span class="number">0</span>].<span class="built_in">SearchLayer</span>(base_vector, limit &gt; ef_search_ ? limit : ef_search_, vertex_ids);</span><br><span class="line">  vertex_ids = <span class="built_in">SelectNeighbors</span>(base_vector, vertex_ids, *vertices_, limit, distance_fn_);</span><br><span class="line"></span><br><span class="line">  std::vector&lt;RID&gt; result;</span><br><span class="line">  result.<span class="built_in">reserve</span>(vertex_ids.<span class="built_in">size</span>());</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; std::<span class="built_in">min</span>(limit, vertex_ids.<span class="built_in">size</span>()); ++i) &#123;</span><br><span class="line">    result.<span class="built_in">push_back</span>(rids_[vertex_ids[i]]);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>插入新节点：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">HNSWIndex::InsertVectorEntry</span><span class="params">(<span class="type">const</span> std::vector&lt;<span class="type">double</span>&gt; &amp;key, RID rid)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">auto</span> id = <span class="built_in">AddVertex</span>(key, rid);</span><br><span class="line"></span><br><span class="line">  <span class="type">size_t</span> level = <span class="built_in">RandomLevel</span>();</span><br><span class="line">  <span class="keyword">while</span> (layers_.<span class="built_in">size</span>() &lt;= level) &#123;</span><br><span class="line">    layers_.<span class="built_in">emplace_back</span>(*vertices_, distance_fn_, m_max_);</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">// Traverse to level + 1.</span></span><br><span class="line">  std::vector&lt;<span class="type">size_t</span>&gt; vertex_ids;</span><br><span class="line">  <span class="keyword">for</span> (<span class="type">int</span> l_idx = layers_.<span class="built_in">size</span>() - <span class="number">1</span>; l_idx &gt; <span class="built_in">static_cast</span>&lt;<span class="type">int</span>&gt;(level); l_idx--) &#123;</span><br><span class="line">    NSW &amp;layer = layers_[l_idx];</span><br><span class="line">    <span class="keyword">if</span> (vertex_ids.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">      vertex_ids = layer.<span class="built_in">SearchLayer</span>(key, <span class="number">1</span>, layer.<span class="built_in">RandomSample</span>(<span class="number">1</span>, generator_));</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      vertex_ids = layer.<span class="built_in">SearchLayer</span>(key, <span class="number">1</span>, vertex_ids);</span><br><span class="line">    &#125;</span><br><span class="line">    vertex_ids = <span class="built_in">SelectNeighbors</span>(key, vertex_ids, *vertices_, <span class="number">1</span>, distance_fn_);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Insert to layer.</span></span><br><span class="line">  <span class="keyword">for</span> (<span class="type">int</span> l_idx = level; l_idx &gt;= <span class="number">0</span>; l_idx--) &#123;</span><br><span class="line">    NSW &amp;layer = layers_[l_idx];</span><br><span class="line">    <span class="keyword">if</span> (vertex_ids.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">      vertex_ids = layer.<span class="built_in">RandomSample</span>(<span class="number">1</span>, generator_);</span><br><span class="line">    &#125;</span><br><span class="line">    layer.<span class="built_in">Insert</span>(key, id, ef_construction_, m_, vertex_ids);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">auto</span> <span class="title">HNSWIndex::RandomLevel</span><span class="params">()</span> -&gt; <span class="type">size_t</span> </span>&#123;</span><br><span class="line">  <span class="function">std::uniform_real_distribution&lt;<span class="type">double</span>&gt; <span class="title">distrib</span><span class="params">(<span class="number">0.0</span>, <span class="number">1.0</span>)</span></span>;</span><br><span class="line">  <span class="type">double</span> u = <span class="built_in">distrib</span>(generator_);</span><br><span class="line">  <span class="type">int</span> level = <span class="built_in">static_cast</span>&lt;<span class="type">int</span>&gt;(std::<span class="built_in">floor</span>(-std::<span class="built_in">log</span>(u) * m_l_));</span><br><span class="line">  <span class="keyword">return</span> level;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即可通过测试。</p>
+<p>整体来说如果做过Project 3 leaderboard部分，就不算难，几个三种向量索引如果理解了，实现也是很简单，但原版讲义还是有很多可以优化的部分。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/" rel="tag"># 数据库</a>
+              <a href="/tags/Bustub/" rel="tag"># Bustub</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/02/25/cs144/lab4/" rel="prev" title="CS144 Lab4 The Summit (TCP in full)">
+                  <i class="fa fa-angle-left"></i> CS144 Lab4 The Summit (TCP in full)
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    
+  <div class="comments" id="disqus_thread">
+    <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+  </div>
+  
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Chengfeng Wang</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">32k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">1:58</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script><script src="/js/bookmark.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="disqus" type="application/json">{"enable":true,"shortname":"wcf","count":true,"i18n":{"disqus":"disqus"}}</script>
+<script src="/js/third-party/comments/disqus.js"></script>
+
+</body>
+</html>
